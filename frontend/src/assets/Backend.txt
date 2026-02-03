@@ -1,0 +1,206 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+
+const API_URL = "http://localhost:3000/products";
+const Backend = () => {
+  const [products, setProducts] = useState([]);
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    category: "",
+    description: "",
+    price: "",
+    stock: "",
+  });
+
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editProduct, setEditProduct] = useState({
+    name: "",
+    category: "",
+    description: "",
+    price: "",
+    stock: "",
+  });
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+  
+  const fetchProducts = async () => {
+    const response = await axios.get(API_URL);
+    setProducts(response.data);
+  };
+
+  const addProduct = async () => {
+    if (
+      !newProduct.name ||
+      !newProduct.category ||
+      !newProduct.description ||
+      !newProduct.price ||
+      !newProduct.stock
+    )
+      return;
+
+    const response = await axios.post(API_URL, newProduct);
+    setProducts([...products, response.data]);
+    setNewProduct({
+      name: "",
+      category: "",
+      description: "",
+      price: "",
+      stock: "",
+      course: "",
+    });
+  };
+
+  const deleteProduct = async (id) => {
+    await axios.delete(`${API_URL}/${id}`);
+
+    setProducts(products.filter((product) => product.id !== id));
+  };
+  const startEditing = (product) => {
+    setEditingProduct(product.id);
+    setEditProduct(product);
+  };
+
+  const updateProduct = async (id) => {
+    await axios.put(`${API_URL}/${id}`, editProduct);
+    setProducts(
+      products.map((product) =>
+        product.id === id ? editProduct : product
+      )
+    );
+    setEditingProduct(null);
+    setEditProduct({
+      name: "",
+      category: "",
+      description: "",
+      price: "",
+      stock: "",
+    });
+  };
+
+  // return (
+  //   <div className="p-4 max-w-md mx-auto">
+  //     <h2 className="text-xl font-bold mb-4">Product CRUD with JSON API</h2>
+  //     <div>
+  //       <input
+  //         className="border p-2 w-full"
+  //         placeholder="Product Name"
+  //         value={newProduct.name}
+  //         onChange={(e) =>
+  //           setNewProduct({ ...newProduct, name: e.target.value })
+  //         }
+  //       />
+  //       <input
+  //         className="border p-2 w-full mt-2"
+  //         placeholder="Category"
+  //         value={newProduct.category}
+  //         onChange={(e) =>
+  //           setNewProduct({ ...newProduct, category: e.target.value })
+  //         }
+  //       />
+  //       <input
+  //         className="border p-2 w-full mt-2"
+  //         placeholder="Description"
+  //         value={newProduct.description}
+  //         onChange={(e) =>
+  //           setNewProduct({ ...newProduct, description: e.target.value })
+  //         }
+  //       />
+  //       <input
+  //         className="border p-2 w-full mt-2"
+  //         placeholder="Price"
+  //         value={newProduct.price}
+  //         onChange={(e) =>
+  //           setNewProduct({ ...newProduct, price: e.target.value })
+  //         }
+  //       />
+  //       <input
+  //         className="border p-2 w-full mt-2"
+  //         placeholder="Stock"
+  //         value={newProduct.stock}
+  //         onChange={(e) =>
+  //           setNewProduct({ ...newProduct, stock: e.target.value })
+  //         }
+  //       />
+  //       <input
+  //         className="border p-2 w-full mt-2"
+  //         placeholder="First Name"
+  //         value={newProduct.firstname}
+  //         onChange={(e) =>
+  //           setNewProduct({ ...newProduct, firstname: e.target.value })
+  //         }
+  //       />
+  //       <input
+  //         className="border p-2 w-full mt-2"
+  //         placeholder="Middle Name"
+  //         value={newProduct.middlename}
+  //         onChange={(e) =>
+  //           setNewProduct({ ...newProduct, middlename: e.target.value })
+  //         }
+  //       />
+  //       <input
+  //         className="border p-2 w-full mt-2"
+  //         placeholder="Course"
+  //         value={newProduct.course}
+  //         onChange={(e) =>
+  //           setNewProduct({ ...newProduct, course: e.target.value })
+  //         }
+  //       />
+  //       <button
+  //         className="bg-blue-500 text-white px-4 py-2 mt-2"
+  //         onClick={addProduct}
+  //       >
+  //         Add
+  //       </button>
+  //     </div>
+  //     <ul className="mt-4">
+  //       {products.map((product) => (
+  //         <li
+  //           key={product.id}
+  //           className="flex justify-between p-2 border-b"
+  //         >
+  //           {editingProduct === product.id ? (
+  //             <input
+  //               className="border p-1"
+  //               value={editProduct.name}
+  //               onChange={(e) =>
+  //                 setEditProduct({ ...editProduct, name: e.target.value })
+  //               }
+  //             />
+  //           ) : (
+  //             <span>
+  //               {product.name} - {product.category}, {product.description}
+  //               {product.price} - {product.stock}
+  //             </span>
+  //           )}
+  //           <div>
+  //             {editingStudent === student.student_id ? (
+  //               <button
+  //                 className="bg-green-500 text-white px-2 py-1"
+  //                 onClick={() => updateStudent(student.student_id)}
+  //               >
+  //                 Save
+  //               </button>
+  //             ) : (
+  //               <button
+  //                 className="bg-yellow-500 text-white px-2 py-1"
+  //                 onClick={() => startEditing(student)}
+  //               >
+  //                 Edit
+  //               </button>
+  //             )}
+  //             <button
+  //               className="bg-red-500 text-white px-2 py-1 ml-2"
+  //               onClick={() => deleteStudent(student.student_id)}
+  //             >
+  //               Delete
+  //             </button>
+  //           </div>
+  //         </li>
+  //       ))}
+  //     </ul>
+  //   </div>
+  // );
+};
+export default Backend;

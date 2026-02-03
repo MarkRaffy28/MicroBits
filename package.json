@@ -1,0 +1,13 @@
+{
+  "name": "microbits",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "concurrently -c \"red,blue,green\" \"json-server --watch backend/db.json --port 4000\" \"node backend/server.js\" \"cross-env PORT=3000 npm start --prefix frontend\"",
+    "t": "cd backend && node server.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
+    "json-server": "^0.17.4"
+  }
+}
