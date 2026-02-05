@@ -2,20 +2,25 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import AdminPanel from "./pages/AdminPanel";
+
+import Home from "./pages/user/Home";
+
+import Dashboard from "./pages/admin/Dashboard";
+import Products from "./pages/admin/Products";
+
 import PrivateRoute from "./components/PrivateRoute";
 import AdminRoute from "./components/AdminRoute";
+
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route
-          path="/dashboard"
+          path="/home"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <Home />
             </PrivateRoute>
           }
         />
@@ -23,7 +28,15 @@ function App() {
           path="/admin"
           element={
             <AdminRoute>
-              <AdminPanel />
+              <Dashboard />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/products"
+          element={
+            <AdminRoute>
+              <Products />
             </AdminRoute>
           }
         />

@@ -2,7 +2,7 @@
   "name": "microbits",
   "version": "0.1.0",
   "scripts": {
-    "dev": "concurrently -c \"red,blue,green\" \"json-server --watch backend/db.json --port 4000\" \"node backend/server.js\" \"cross-env PORT=3000 npm start --prefix frontend\"",
+    "dev": "concurrently -c \"blue,green\" \"node backend/server.js\" \"cross-env PORT=3000 npm start --prefix frontend\"",
     "t": "cd backend && node server.js"
   },
   "devDependencies": {

@@ -86,7 +86,21 @@
       "category": "Microcontrollers",
       "description": "Latest arduino",
       "price": "7",
-      "stock": "3"
+      "stock": "4"
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "admin123",
+      "role": "admin"
+    },
+    {
+      "id": 2,
+      "username": "user",
+      "password": "user123",
+      "role": "user"
     }
   ]
 }

@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { ReactComponent as Logo } from "../assets/logo.svg"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEyeSlash, faXmarkCircle } from "@fortawesome/free-solid-svg-icons";  
+import { faEye, faEyeSlash, faXmarkCircle } from "@fortawesome/free-solid-svg-icons"; 
+ 
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -34,7 +35,7 @@ const Login = () => {
       localStorage.setItem("user", JSON.stringify(decoded));
 
       // Redirect to dashboard
-      navigate("/dashboard");
+      navigate("/home");
     } catch (err) {
       setError("Invalid username or password");
       setIsLoading(false);
@@ -161,6 +162,6 @@ const Login = () => {
         </div>
       </div>
     </div>
-);
+  );
 };
 export default Login;
