@@ -31,9 +31,6 @@ function UserNavigation() {
             <Nav.Link href="/home" className="fw-bold">
               Home
             </Nav.Link>
-            <Nav.Link href="/manage_products" className="fw-bold">
-              Shop
-            </Nav.Link>
           </Nav>
           <div className="d-flex">
             <Button variant="success" className="me-3">{user?.username}</Button>

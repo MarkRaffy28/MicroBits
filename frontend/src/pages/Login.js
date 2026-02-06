@@ -35,7 +35,11 @@ const Login = () => {
       localStorage.setItem("user", JSON.stringify(decoded));
 
       // Redirect to dashboard
-      navigate("/home");
+      if (decoded.role === "admin") {
+        navigate("admin");
+      } else {
+        navigate("/home");
+      }
     } catch (err) {
       setError("Invalid username or password");
       setIsLoading(false);

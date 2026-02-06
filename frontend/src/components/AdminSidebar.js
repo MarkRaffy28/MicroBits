@@ -15,21 +15,21 @@ function AdminSidebar({ isOpen, onClose, activePath }) {
   const getNavLinkClasses = (path) =>
   `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
     activePath === path
-      ? "bg-blue-600 text-white font-bold"
+      ? "text-blue-400 font-bold hover:text-white hover:bg-blue-600"
       : "hover:bg-blue-600"
   }`;
 
   const getSubmenuClasses = (path) =>
   `w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors ${
     activePath === path
-      ? "bg-blue-600 text-white font-bold"
+      ? "text-blue-400 font-bold hover:text-white hover:bg-blue-600"
       : "hover:bg-blue-600"
   }`;
 
   const getSubmenuNavLinkClasses = (path) =>
   `block px-4 py-2 text-sm rounded-lg rounded-lg transition-colors ${
     activePath === path
-      ? "bg-blue-600 text-white font-bold"
+      ? "text-blue-400 font-bold hover:text-white hover:bg-blue-600"
       : "hover:bg-blue-600"
   }`;
 
@@ -77,21 +77,21 @@ function AdminSidebar({ isOpen, onClose, activePath }) {
               <li>
                 <NavLink
                   to="/admin"
-                  className={getNavLinkClasses("admin")}
+                  className={getNavLinkClasses("/admin")}
                   onClick={onClose}
                 >
-                  <FontAwesomeIcon icon={getNavIcon("admin", faHouse, faHouseRegular)} size={20} className="flex-shrink-0" />
+                  <FontAwesomeIcon icon={getNavIcon("/admin", faHouse, faHouseRegular)} size={20} className="flex-shrink-0" />
                   <span>Dashboard</span>
                 </NavLink>
               </li>
               <li>
                 <button
                   onClick={() => toggleSubmenu('users')}
-                  className={getSubmenuClasses("users")}
+                  className={getSubmenuClasses("/admin/users")}
                 >
                   <div className="flex items-center gap-3">
-                    <FontAwesomeIcon icon={getNavIcon("users", faUser, faUserRegular)} size={20} className="flex-shrink-0" />
-                    <span className={activePath === "users" ? "font-bold" : "font-normal"}>Users</span>
+                    <FontAwesomeIcon icon={getNavIcon("/admin/users", faUser, faUserRegular)} size={20} className="flex-shrink-0" />
+                    <span>Users</span>
                   </div>
                   <FontAwesomeIcon icon={openSubmenu === 'users' ? faChevronDown : faChevronRight} size={16} className="flex-shrink-0" />
                 </button>
@@ -110,10 +110,10 @@ function AdminSidebar({ isOpen, onClose, activePath }) {
               <li>
                 <NavLink
                   to="/admin/products"
-                  className={getNavLinkClasses("products")}
+                  className={getNavLinkClasses("/admin/products")}
                   onClick={onClose}
                 >
-                  <FontAwesomeIcon icon={getNavIcon("products", faClipboard, faClipboardRegular)} size={20} className="flex-shrink-0" />
+                  <FontAwesomeIcon icon={getNavIcon("/admin/products", faClipboard, faClipboardRegular)} size={20} className="flex-shrink-0" />
                   <span>Products</span>
                 </NavLink>
               </li>
@@ -123,7 +123,7 @@ function AdminSidebar({ isOpen, onClose, activePath }) {
           <div className="p-4 border-t border-gray-600">
             <button
               onClick={() => handleLogout()}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-red-600 transition-colors"
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg font-medium text-red-600 hover:text-white hover:bg-red-600 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <FontAwesomeIcon icon={faRightFromBracket} size={20} className="flex-shrink-0" />

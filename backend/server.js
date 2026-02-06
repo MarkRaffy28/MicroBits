@@ -1,5 +1,6 @@
-const express = require("express");
 const cors = require("cors");
+const express = require("express");
+const path = require("path");
 const authRoutes = require("./routes/auth");
 const productRoutes = require("./routes/products");
 
@@ -10,6 +11,9 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
+
+app.use("/data/images/products", express.static(path.join(__dirname, "data/images/products")));
+
 
 const PORT = 5000;
 app.listen(PORT, () => {

@@ -8,8 +8,9 @@ import Home from "./pages/user/Home";
 import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
 
-import PrivateRoute from "./components/PrivateRoute";
+import UserRoute from "./components/UserRoute";
 import AdminRoute from "./components/AdminRoute";
+import AdminLayout from "./pages/admin/AdminLayout";
 
 function App() {
   return (
@@ -19,27 +20,22 @@ function App() {
         <Route
           path="/home"
           element={
-            <PrivateRoute>
+            <UserRoute>
               <Home />
-            </PrivateRoute>
+            </UserRoute>
           }
         />
         <Route
           path="/admin"
           element={
             <AdminRoute>
-              <Dashboard />
+              <AdminLayout />
             </AdminRoute>
           }
-        />
-        <Route
-          path="/admin/products"
-          element={
-            <AdminRoute>
-              <Products />
-            </AdminRoute>
-          }
-        />
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="products" element={<Products />} />
+        </Route>
       </Routes>
     </Router>
   );

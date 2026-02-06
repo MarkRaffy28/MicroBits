@@ -5,24 +5,24 @@
       "name": "ESP32 Dev Board",
       "category": "Microcontroller",
       "description": "WiFi + Bluetooth, 38 pins",
-      "price": 8.99,
-      "stock": 25
+      "price": "8.99",
+      "stock": "25"
     },
     {
       "id": "2",
       "name": "DHT22 Sensor",
       "category": "Sensor",
       "description": "Temperature & Humidity",
-      "price": 5.5,
-      "stock": 40
+      "price": "5.5",
+      "stock": "40"
     },
     {
       "id": "3",
       "name": "BMP280 Sensor",
       "category": "Sensor",
       "description": "Pressure & Temperature",
-      "price": 4.2,
-      "stock": 35
+      "price": "4.2",
+      "stock": "35"
     },
     {
       "id": "4",
@@ -37,8 +37,8 @@
       "name": "OLED Display",
       "category": "Display",
       "description": "0.96 inch I2C 128x64",
-      "price": 6,
-      "stock": 30
+      "price": "6",
+      "stock": "30"
     },
     {
       "id": "6",
@@ -87,6 +87,14 @@
       "description": "Latest arduino",
       "price": "7",
       "stock": "4"
+    },
+    {
+      "id": "12",
+      "name": "1",
+      "category": "1",
+      "description": "1",
+      "price": "1",
+      "stock": "1"
     }
   ],
   "users": [
