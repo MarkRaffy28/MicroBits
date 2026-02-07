@@ -1,4 +1,51 @@
 {
+  "orders": [
+    {
+      "id": "1",
+      "userId": "1",
+      "items": [
+        {
+          "productId": "3",
+          "quantity": 1,
+          "price": 4.2
+        }
+      ],
+      "totalAmount": 4.2,
+      "status": "pending",
+      "paymentMethod": "cash",
+      "createdAt": "2026-02-07T12:51:47.958Z"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "items": [
+        {
+          "productId": "3",
+          "quantity": 1,
+          "price": 4.2
+        }
+      ],
+      "totalAmount": 4.2,
+      "status": "pending",
+      "paymentMethod": "cash",
+      "createdAt": "2026-02-07T13:17:57.280Z"
+    },
+    {
+      "id": "3",
+      "userId": "1",
+      "items": [
+        {
+          "productId": "1",
+          "quantity": 1,
+          "price": 8.99
+        }
+      ],
+      "totalAmount": 8.99,
+      "status": "pending",
+      "paymentMethod": "cash",
+      "createdAt": "2026-02-07T13:22:56.438Z"
+    }
+  ],
   "products": [
     {
       "id": "1",
@@ -6,7 +53,7 @@
       "category": "Microcontroller",
       "description": "WiFi + Bluetooth, 38 pins",
       "price": "8.99",
-      "stock": "25"
+      "stock": "1"
     },
     {
       "id": "2",
@@ -22,7 +69,7 @@
       "category": "Sensor",
       "description": "Pressure & Temperature",
       "price": "4.2",
-      "stock": "35"
+      "stock": 33
     },
     {
       "id": "4",

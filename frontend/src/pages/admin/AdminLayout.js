@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBurger } from "@fortawesome/free-solid-svg-icons";
 import AdminSidebar from "../../components/AdminSidebar"
@@ -10,18 +10,14 @@ function AdminLayout() {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const closeSidebar = () => setIsSidebarOpen(false);
 
-  const location = useLocation();
-  const activePath = location.pathname;
-
   const [pageTitle, setPageTitle] = useState("Admin");
   const [headerAction, setHeaderAction] = useState(null);
 
   return (
     <div className="flex h-screen">
       <AdminSidebar
-      isOpen={isSidebarOpen}
+        isOpen={isSidebarOpen}
         onClose={closeSidebar}
-        activePath={activePath}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">

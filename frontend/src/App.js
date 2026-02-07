@@ -4,13 +4,16 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 
 import Home from "./pages/user/Home";
+import ProductDetail from "./pages/user/ProductDetail";
+import Shop from "./pages/user/Shop";
 
 import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
 
-import UserRoute from "./components/UserRoute";
-import AdminRoute from "./components/AdminRoute";
 import AdminLayout from "./pages/admin/AdminLayout";
+import AdminRoute from "./components/AdminRoute";
+import UserLayout from "./pages/user/UserLayout";
+import UserRoute from "./components/UserRoute";
 
 function App() {
   return (
@@ -18,13 +21,18 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route
-          path="/home"
+          path="/user"
           element={
             <UserRoute>
-              <Home />
+              <UserLayout />
             </UserRoute>
           }
-        />
+        >
+          <Route index element={<Home />} />
+          <Route path="shop" element={<Shop />} />
+          <Route path="product/:id" element={<ProductDetail />} />
+        </Route>
+
         <Route
           path="/admin"
           element={

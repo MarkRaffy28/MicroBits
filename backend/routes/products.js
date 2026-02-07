@@ -55,6 +55,24 @@ router.get("/", (req, res) => {
   res.json(products);
 });
 
+// GET /products/:id
+router.get("/:id", (req, res) => {
+  const db = readDB();
+  const product = (db.products || []).find(
+    (p) => String(p.id) === String(req.params.id)
+  );
+
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
+  }
+
+  res.json({
+    ...product,
+    image: getProductImage(product.id),
+  });
+});
+
+
 // POST /products
 router.post("/", uploadMemory.single("image"), async (req, res) => {
   const db = readDB();

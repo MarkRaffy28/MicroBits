@@ -1,74 +1,90 @@
 import React from "react";
-import { Container, Row, Col } from "react-bootstrap";
 
 function UserFooter() {
+  const getSocialLink = (href, additionalClasses, icon) => {
+    return <a href={href} className={`w-10 h-10 flex items-center justify-center rounded-lg bg-white/10 text-white hover:scale-110 transition-all text-xl ${additionalClasses}`}
+    >
+      <i className={`bi ${icon}`}></i>
+    </a>
+    
+  }
+
   return (
-    <footer className="bg-blue-700 pt-4">
-      <Container>
-        <Row>
-          <Col md={3} className="mb-3">
-            <h5 className="fw-bold">About Us</h5>
-            <p>
+    <footer className="bg-blue-700 text-white pt-8">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* About Us */}
+          <div className="mb-3">
+            <h5 className="font-bold text-lg mb-3">About Us</h5>
+            <p className="text-white/90 text-sm leading-relaxed">
               MicroBits is your one-stop shop for affordable and reliable IoT
               and electronics components, made to help students, makers, and
               developers build smart projects easily.
             </p>
-          </Col>
-          <Col md={3} className="contact-us mb-3">
-            <h5 className="fw-bold">Contact Us</h5>
-            <ul className="list-unstyled">
+          </div>
+
+          {/* Contact Us */}
+          <div className="mb-3">
+            <h5 className="font-bold text-lg mb-3">Contact Us</h5>
+            <ul className="space-y-2 text-sm">
               <li>
-                <a href="#">
-                  <i className="fa-solid fa-location-dot"></i>12-7
-                  Samseong-dong, Gangnam-gu, Seoul, South Korea{" "}
+                <a href="#" className="text-white/90 hover:text-white hover:underline transition-all flex items-start gap-2 group">
+                  <i className="bi bi-geo-alt-fill mt-1 flex-shrink-0 group-hover:scale-110 transition-transform"></i>
+                  <span>12-7 Samseong-dong, Gangnam-gu, Seoul, South Korea</span>
                 </a>
               </li>
               <li>
-                <a href="#">
-                  <i className="fa-solid fa-envelope"></i>microbits.kr@gmail.com
+                <a href="#" className="text-white/90 hover:text-white hover:underline transition-all flex items-center gap-2 group">
+                  <i className="bi bi-envelope-fill flex-shrink-0 group-hover:scale-110 transition-transform"></i>
+                  <span>microbits.kr@gmail.com</span>
                 </a>
               </li>
               <li>
-                <a href="#">
-                  <i className="fa-solid fa-phone"></i>(+82) 10-3847-6291
+                <a href="#" className="text-white/90 hover:text-white hover:underline transition-all flex items-center gap-2 group">
+                  <i className="bi bi-telephone-fill flex-shrink-0 group-hover:scale-110 transition-transform"></i>
+                  <span>(+82) 10-3847-6291</span>
                 </a>
               </li>
             </ul>
-          </Col>
-          <Col md={3} className="mb-4">
-            <h5 className="fw-bold">Follow Us</h5>
-            <a href="">
-              <i className="fa-brands fa-facebook"></i>
-            </a>
-            <a href="">
-              <i className="fa-brands fa-instagram"></i>
-            </a>
-            <a href="">
-              <i className="fa-brands fa-telegram"></i>
-            </a>
-            <a href="">
-              <i className="fa-brands fa-x-twitter"></i>
-            </a>
-            <a href="">
-              <i className="fa-brands fa-youtube"></i>
-            </a>
-          </Col>
-          <Col md={3} className="mb-3">
-            <h5 className="fw-bold">Legal</h5>
-            <ul className="list-unstyled">
+          </div>
+
+          {/* Follow Us */}
+          <div className="mb-4">
+            <h5 className="font-bold text-lg mb-3">Follow Us</h5>
+            <div className="flex gap-3">
+              {getSocialLink("#", "hover:bg-[#1877F2]", "bi-facebook")}
+              {getSocialLink("#", "hover:bg-gradient-to-br hover:from-[#833AB4] hover:via-[#E1306C] hover:to-[#F77737]", "bi-instagram")}
+              {getSocialLink("#", "hover:bg-[#0088CC]", "bi-telegram")}
+              {getSocialLink("#", "hover:bg-black", "bi-twitter-x")}
+              {getSocialLink("#", "hover:bg-[#FF0000]", "bi-youtube")}
+            </div>
+          </div>
+
+          {/* Legal */}
+          <div className="mb-3">
+            <h5 className="font-bold text-lg mb-3">Legal</h5>
+            <ul className="space-y-2 text-sm">
               <li>
-                <a href="#">Privacy</a>
+                <a href="#" className="text-white/90 hover:text-white hover:underline transition-colors inline-block">
+                  Privacy
+                </a>
               </li>
               <li>
-                <a href="#">Terms of Use</a>
+                <a href="#" className="text-white/90 hover:text-white hover:underline transition-colors inline-block">
+                  Terms of Use
+                </a>
               </li>
             </ul>
-          </Col>
-        </Row>
-        <div className="text-center py-3 border-top mt-3">
-          © 2026 MicroBits. All rights reserved.
+          </div>
         </div>
-      </Container>
+
+        {/* Copyright */}
+        <div className="text-center py-3 border-t border-white/20 mt-6">
+          <p className="text-sm text-white/80">
+            © {new Date().getFullYear()} MicroBits. All rights reserved.
+          </p>
+        </div>
+      </div>
     </footer>
   );
 }

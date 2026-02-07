@@ -1,12 +1,14 @@
-import { useNavigate } from "react-router-dom";
-import { Navbar, Nav, Container, Form, Button } from "react-bootstrap";
-
-import "./Stylesheet.css";
+import { useNavigate, useLocation, NavLink } from "react-router-dom";
+import { useState } from "react";
 
 import { ReactComponent as Logo } from "../assets/logo.svg";
 import { ReactComponent as Burger } from "../assets/burger.svg";
 
 function UserNavigation() {
+  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+  const activePath = location.pathname;
+
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -16,31 +18,114 @@ function UserNavigation() {
     navigate("/");
   };
 
+  const navItems = [
+    { path: "/user", label: "Home" },
+    { path: "/user/shop", label: "Shop" },
+  ];
+
+  const getNavLinkClasses = (path, isMobile = false) => {
+    const isActive = activePath === path;
+    
+    if (isMobile) {
+      return `block px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+        isActive
+          ? "bg-blue-500/20 text-white/90 border-l-4 border-blue-400"
+          : "text-white/80 hover:bg-white/10 hover:text-white"
+      }`;
+    }
+    
+    return `relative font-medium transition-all duration-200 ${
+      isActive
+        ? "text-white"
+        : "text-white/80 hover:text-white"
+    }`;
+  };
+
+  const getUnderlineClasses = (path) => {
+    const isActive = activePath === path;
+    return `absolute -bottom-0 left-0 h-0.5 bg-white transition-all duration-300 ${
+      isActive ? "w-full" : "w-0 group-hover:w-full"
+    }`;
+  };
+
   return (
-    <Navbar className="bg-blue-700" expand="lg" data-bs-theme="dark">
-      <Container fluid>
-        <Navbar.Brand href="/home">
-          <Logo className="inline" height="26" />{" "}
-          <span className="fw-bold navbar-title">MicroBits</span>
-        </Navbar.Brand>
-        <Navbar.Toggle aria-controls="navbar-content">
-          <Burger height="24" />
-        </Navbar.Toggle>
-        <Navbar.Collapse id="navbar-content">
-          <Nav className="me-auto mb-2 mb-lg-0">
-            <Nav.Link href="/home" className="fw-bold">
-              Home
-            </Nav.Link>
-          </Nav>
-          <div className="d-flex">
-            <Button variant="success" className="me-3">{user?.username}</Button>
-            <Button variant="danger" onClick={handleLogout}>
-              Logout
-            </Button>
+    <nav className="sticky top-0 z-50 bg-gradient-to-r from-blue-700 to-blue-800 shadow-lg">
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Brand */}
+          <NavLink 
+            to="/user" 
+            className="flex items-center gap-3 text-white no-underline group transition-transform hover:scale-105"
+          >
+            <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm group-hover:bg-white/20 transition-colors">
+              <Logo className="inline" height="26" />
+            </div>
+            <span className="font-bold text-xl tracking-tight">MicroBits</span>
+          </NavLink>
+
+          {/* Desktop Navigation */}
+          <div className="hidden w-full ml-8 md:flex justify-between items-center gap-8">
+            <div className="flex items-center gap-4">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={`${getNavLinkClasses(item.path)} group no-underline`}
+                >
+                  {item.label}
+                  <span className={getUnderlineClasses(item.path)}></span>
+                </NavLink>
+              ))}
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleLogout}
+                className="bg-red-500/90 hover:bg-red-600 text-white font-medium px-3 py-1 rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-red-500/30"
+              >
+                Logout
+              </button>
+            </div>
           </div>
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
+
+          {/* Mobile menu button */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Toggle menu"
+          >
+            <Burger height="24" />
+          </button>
+        </div>
+
+        {/* Mobile menu */}
+        <div
+          className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+            isOpen ? "max-h-96 pb-4" : "max-h-0"
+          }`}
+        >
+          <div className="flex flex-col gap-2 pt-4 border-t border-white/20">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={`${getNavLinkClasses(item.path, true)} no-underline`}
+                onClick={() => setIsOpen(false)}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+            
+            <button
+              onClick={handleLogout}
+              className="mt-2 w-full bg-red-500/90 hover:bg-red-600 text-white font-medium px-3 py-1 rounded-lg transition-all duration-200"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }
 
