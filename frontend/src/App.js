@@ -14,6 +14,8 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminRoute from "./components/AdminRoute";
 import UserLayout from "./pages/user/UserLayout";
 import UserRoute from "./components/UserRoute";
+import Cart from "./pages/user/Cart";
+import { CartProvider } from "./context/CartContext";
 
 function App() {
   return (
@@ -23,14 +25,17 @@ function App() {
         <Route
           path="/user"
           element={
-            <UserRoute>
-              <UserLayout />
-            </UserRoute>
+            <CartProvider>
+              <UserRoute>
+                <UserLayout />
+              </UserRoute>
+            </CartProvider>
           }
-        >
+          >
           <Route index element={<Home />} />
           <Route path="shop" element={<Shop />} />
           <Route path="product/:id" element={<ProductDetail />} />
+          <Route path="cart" element={<Cart />} />
         </Route>
 
         <Route

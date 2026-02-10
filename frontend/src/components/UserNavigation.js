@@ -1,16 +1,37 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation, NavLink } from "react-router-dom";
-import { useState } from "react";
+import axios from "axios";
 
 import { ReactComponent as Logo } from "../assets/logo.svg";
 import { ReactComponent as Burger } from "../assets/burger.svg";
+import { useCart } from "../context/CartContext";
+
+const CART_URL = "http://localhost:5000/api/cart";
 
 function UserNavigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const { cartCount } = useCart();
+
   const location = useLocation();
   const activePath = location.pathname;
 
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
+
+  useEffect(() => {
+    if (user) {
+      fetchCartCount();
+    }
+  }, []);
+
+  const fetchCartCount = async () => {
+    try {
+      const response = await axios.get(`${CART_URL}/${user.id}`);
+      const total = response.data.reduce((sum, item) => sum + item.quantity, 0);
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -78,7 +99,18 @@ function UserNavigation() {
               ))}
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-6">
+              <button
+                onClick={() => navigate("/user/cart")}
+                className="relative bg-white/10 hover:bg-white/20 text-white p-[6px] rounded-lg transition-all duration-200"
+              >
+                <i className="bi bi-cart3 text-2xl"></i>
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
               <button
                 onClick={handleLogout}
                 className="bg-red-500/90 hover:bg-red-600 text-white font-medium px-3 py-1 rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-red-500/30"
@@ -87,15 +119,29 @@ function UserNavigation() {
               </button>
             </div>
           </div>
+          
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/user/cart")}
+              className="md:hidden relative bg-white/10 hover:bg-white/20 text-white p-[6px] rounded-lg transition-all duration-200"
+            >
+              <i className="bi bi-cart3 text-2xl"></i>
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
-            aria-label="Toggle menu"
-          >
-            <Burger height="24" />
-          </button>
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+              aria-label="Toggle menu"
+            >
+              <Burger height="24" />
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu */}

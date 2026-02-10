@@ -32,7 +32,7 @@ function Shop() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {products.map((product) => (
-            Number(product.stock) > 0 && (
+            product.stock > 0 && (
               <div
                 key={product.id}
                 onClick={() => handleProductClick(product.id)}
@@ -53,7 +53,7 @@ function Shop() {
                     </div>
                   )}  
 
-                  {Number(product.stock) < 10 && (
+                  {product.stock < 10 && (
                     <div className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold bg-yellow-500">
                       Only {product.stock} left
                     </div>

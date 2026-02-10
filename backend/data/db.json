@@ -1,11 +1,11 @@
 {
   "orders": [
     {
-      "id": "1",
-      "userId": "1",
+      "id": 1,
+      "userId": 1,
       "items": [
         {
-          "productId": "3",
+          "productId": 3,
           "quantity": 1,
           "price": 4.2
         }
@@ -16,11 +16,11 @@
       "createdAt": "2026-02-07T12:51:47.958Z"
     },
     {
-      "id": "2",
-      "userId": "1",
+      "id": 2,
+      "userId": 1,
       "items": [
         {
-          "productId": "3",
+          "productId": 3,
           "quantity": 1,
           "price": 4.2
         }
@@ -31,11 +31,11 @@
       "createdAt": "2026-02-07T13:17:57.280Z"
     },
     {
-      "id": "3",
-      "userId": "1",
+      "id": 3,
+      "userId": 1,
       "items": [
         {
-          "productId": "1",
+          "productId": 1,
           "quantity": 1,
           "price": 8.99
         }
@@ -44,35 +44,55 @@
       "status": "pending",
       "paymentMethod": "cash",
       "createdAt": "2026-02-07T13:22:56.438Z"
+    },
+    {
+      "id": 4,
+      "userId": 2,
+      "items": [
+        {
+          "productId": 3,
+          "quantity": 1,
+          "price": 39.2
+        },
+        {
+          "productId": 9,
+          "quantity": 1,
+          "price": 2
+        }
+      ],
+      "totalAmount": 41.2,
+      "status": "pending",
+      "paymentMethod": "cash",
+      "createdAt": "2026-02-10T12:06:28.086Z"
     }
   ],
   "products": [
     {
-      "id": "1",
+      "id": 1,
       "name": "ESP32 Dev Board",
       "category": "Microcontroller",
       "description": "WiFi + Bluetooth, 38 pins",
-      "price": "8.99",
-      "stock": "1"
+      "price": 8.99,
+      "stock": 3
     },
     {
-      "id": "2",
+      "id": 2,
       "name": "DHT22 Sensor",
       "category": "Sensor",
       "description": "Temperature & Humidity",
-      "price": "5.5",
-      "stock": "40"
+      "price": 5.5,
+      "stock": 40
     },
     {
-      "id": "3",
+      "id": 3,
       "name": "BMP280 Sensor",
       "category": "Sensor",
       "description": "Pressure & Temperature",
-      "price": "4.2",
-      "stock": 33
+      "price": 39.2,
+      "stock": 32
     },
     {
-      "id": "4",
+      "id": 4,
       "name": "Relay Module",
       "category": "Module",
       "description": "2-Channel 5V",
@@ -80,15 +100,15 @@
       "stock": 50
     },
     {
-      "id": "5",
+      "id": 5,
       "name": "OLED Display",
       "category": "Display",
       "description": "0.96 inch I2C 128x64",
-      "price": "6",
-      "stock": "30"
+      "price": 6,
+      "stock": 30
     },
     {
-      "id": "6",
+      "id": 6,
       "name": "HC-SR04",
       "category": "Sensor",
       "description": "Ultrasonic Distance",
@@ -96,7 +116,7 @@
       "stock": 60
     },
     {
-      "id": "7",
+      "id": 7,
       "name": "LED Module",
       "category": "Module",
       "description": "RGB 5V WS2812",
@@ -104,7 +124,7 @@
       "stock": 80
     },
     {
-      "id": "8",
+      "id": 8,
       "name": "Buzzer Module",
       "category": "Module",
       "description": "Active 5V",
@@ -112,36 +132,28 @@
       "stock": 100
     },
     {
-      "id": "9",
+      "id": 9,
       "name": "Joystick Module",
       "category": "Module",
       "description": "XY Analog + Button",
       "price": 2,
-      "stock": 45
+      "stock": 44
     },
     {
-      "id": "10",
+      "id": 10,
       "name": "Micro Servo",
       "category": "Actuator",
       "description": "SG90 5V 180 degrees",
       "price": 3,
-      "stock": "71"
+      "stock": 71
     },
     {
-      "id": "11",
+      "id": 11,
       "name": "Arduino R4",
       "category": "Microcontrollers",
       "description": "Latest arduino",
-      "price": "7",
-      "stock": "4"
-    },
-    {
-      "id": "12",
-      "name": "1",
-      "category": "1",
-      "description": "1",
-      "price": "1",
-      "stock": "1"
+      "price": 7,
+      "stock": 4
     }
   ],
   "users": [
@@ -155,7 +167,17 @@
       "id": 2,
       "username": "user",
       "password": "user123",
-      "role": "user"
+      "role": "user",
+      "cart": [
+        {
+          "productId": 4,
+          "quantity": 2
+        },
+        {
+          "productId": 1,
+          "quantity": 3
+        }
+      ]
     }
   ]
 }

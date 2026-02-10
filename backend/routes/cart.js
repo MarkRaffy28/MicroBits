@@ -17,7 +17,7 @@ const writeDB = (data) =>
 router.get("/:userId", (req, res) => {
   const db = readDB();
   const user = db.users.find(
-    (u) => String(u.id) === String(req.params.userId)
+    (u) => u.id === Number(req.params.userId)
   );
 
   if (!user) {
@@ -35,7 +35,7 @@ router.post("/:userId", (req, res) => {
   const { productId, quantity } = req.body;
 
   const user = db.users.find(
-    (u) => String(u.id) === String(req.params.userId)
+    (u) => u.id === Number(req.params.userId)
   );
 
   if (!user) {
@@ -45,14 +45,14 @@ router.post("/:userId", (req, res) => {
   user.cart = user.cart || [];
 
   const existingItem = user.cart.find(
-    (item) => String(item.productId) === String(productId)
+    (item) => item.productId === productId
   );
 
   if (existingItem) {
     existingItem.quantity += Number(quantity);
   } else {
     user.cart.push({
-      productId: String(productId),
+      productId: Number(productId),
       quantity: Number(quantity),
     });
   }

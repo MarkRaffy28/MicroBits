@@ -59,7 +59,7 @@ router.get("/", (req, res) => {
 router.get("/:id", (req, res) => {
   const db = readDB();
   const product = (db.products || []).find(
-    (p) => String(p.id) === String(req.params.id)
+    (p) => p.id === Number(req.params.id)
   );
 
   if (!product) {
@@ -82,31 +82,41 @@ router.post("/", uploadMemory.single("image"), async (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  const productId = id || Date.now().toString();
+  const newProduct = { id, name, category, description, price, stock };
 
-  const newProduct = { id: productId, name, category, description, price, stock };
+  ["id", "price", "stock"].forEach((key) => {
+    if (newProduct[key] !== undefined) {
+      newProduct[key] = Number(newProduct[key]);
+    }
+  });
 
   // save image as webp
   if (req.file) {
-    deleteOldImages(productId);
-    await saveImageWebp(req.file.buffer, productId);
+    deleteOldImages(id);
+    await saveImageWebp(req.file.buffer, id);
   }
 
   db.products.push(newProduct);
   writeDB(db);
 
-  res.status(201).json({ ...newProduct, image: getProductImage(productId) });
+  res.status(201).json({ ...newProduct, image: getProductImage(id) });
 });
 
 // PUT /products/:id
 router.put("/:id", uploadForUpdate.single("image"), async (req, res) => {
   const db = readDB();
-  const { id } = req.params;
+  const id = Number(req.params.id);
   const productIndex = db.products.findIndex((p) => p.id === id);
 
   if (productIndex === -1) return res.status(404).json({ message: "Product not found" });
 
   const updatedProduct = { ...db.products[productIndex], ...req.body, id };
+
+  ["price", "stock"].forEach((key) => {
+    if (updatedProduct[key] !== undefined) {
+      updatedProduct[key] = Number(updatedProduct[key]);
+    }
+  });
 
   if (req.file) {
     deleteOldImages(id);
@@ -122,7 +132,7 @@ router.put("/:id", uploadForUpdate.single("image"), async (req, res) => {
 // DELETE /products/:id
 router.delete("/:id", (req, res) => {
   const db = readDB();
-  const { id } = req.params;
+  const id  = Number(req.params.id);
 
   const productIndex = db.products.findIndex((p) => p.id === id);
   if (productIndex === -1) return res.status(404).json({ message: "Product not found" });

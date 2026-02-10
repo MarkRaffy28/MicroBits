@@ -20,6 +20,16 @@ const navItems = [
     path: "/admin/products",
     icon: "bi-box-seam",
   },
+  {
+    label: "Orders",
+    path: "/admin/all_orders",
+    icon: "bi-truck",
+    submenu: [
+      { label: "All Orders", path: "/admin/all_orders" },
+      { label: "Pending Orders", path: "/admin/pending_orders" },
+      { label: "Completed Orders", path: "/admin/completed_orders" }
+    ],
+  },
 ];
 
 function AdminSidebar({ isOpen, onClose }) {

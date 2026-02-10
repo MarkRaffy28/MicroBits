@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
+import { useCart } from "../../context/CartContext";
 
 const API_URL = "http://localhost:5000/api/products";
-const ORDERS_URL = "http://localhost:5000/api/orders";
+const CART_URL = "http://localhost:5000/api/cart";
 
 function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const { fetchCartCount } = useCart();
 
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -41,14 +42,14 @@ function ProductDetail() {
 
   const updateQuantity = (change) => {
     const newQty = quantity + change;
-    if (newQty >= 1 && newQty <= Number(product.stock)) {
+    if (newQty >= 1 && newQty <= product.stock) {
       setQuantity(newQty);
     }
   };
 
-  const handleOrder = async () => {
+  const handleAddToCart = async () => {
     if (!user) {
-      setMessage("❌ Please login to place an order");
+      setMessage("❌ Please login to add to cart");
       return;
     }
 
@@ -58,30 +59,37 @@ function ProductDetail() {
     }
 
     try {
-      const orderData = {
-        userId: user.id,
-        items: [
-          {
-            productId: product.id,
-            quantity: quantity,
-            price: Number(product.price),
-          },
-        ],
-        paymentMethod: paymentMethod,
-      };
+      const cartResponse = await axios.get(`${CART_URL}/${user.id}`);
+      const existingItem = cartResponse.data.find(
+        (item) => String(item.productId) === String(product.id)
+      );
 
-      await axios.post(ORDERS_URL, orderData);
-      setMessage("✅ Order placed successfully!");
-      
-      setTimeout(() => {
-        navigate("/user");
-      }, 1500);
+      const currentCartQty = existingItem ? existingItem.quantity : 0;
+      const newTotalQty = currentCartQty + quantity;
+
+      if (newTotalQty > Number(product.stock)) {
+        const remainingStock = Number(product.stock) - currentCartQty;
+        if (remainingStock <= 0) {
+          setMessage(`❌ You already have the maximum stock (${product.stock}) in your cart`);
+        } else {
+          setMessage(`❌ Only ${remainingStock} more can be added. You already have ${currentCartQty} in cart`);
+        }
+        return;
+      }
+
+      await axios.post(`${CART_URL}/${user.id}`, {
+        productId: product.id,
+        quantity: quantity,
+      });
+
+      setMessage("✅ Added to cart!");
+      setQuantity(1);
     } catch (error) {
-      console.error("Error placing order:", error);
+      console.error("Error adding to cart:", error);
       if (error.response?.data?.message) {
         setMessage(`❌ ${error.response.data.message}`);
       } else {
-        setMessage("❌ Failed to place order. Please try again.");
+        setMessage("❌ Failed to add to cart. Please try again.");
       }
     }
   };
@@ -133,13 +141,13 @@ function ProductDetail() {
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Product Image */}
-          <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+          {/* Product Image - Centered */}
+          <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex items-center justify-center p-8">
             {product.image ? (
               <img
                 src={`http://localhost:5000${product.image}`}
                 alt={product.name}
-                className="w-full h-auto object-contain"
+                className="max-w-full max-h-96 object-contain"
               />
             ) : (
               <div className="w-full aspect-square flex items-center justify-center bg-gray-900">
@@ -165,13 +173,13 @@ function ProductDetail() {
             {/* Stock Status */}
             <div className="mb-6">
               <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                Number(product.stock) === 0 ? 'bg-red-500' :
-                Number(product.stock) < 10 ? 'bg-yellow-500 text-gray-900' :
+                product.stock === 0 ? 'bg-red-500' :
+                product.stock < 10 ? 'bg-yellow-500 text-gray-900' :
                 'bg-green-500'
               }`}>
-                {Number(product.stock) === 0 ? 'Out of Stock' : 
-                Number(product.stock) < 10 ? `Only ${product.stock} left` :
-                'In Stock'}
+                {product.stock === 0 ? 'Out of Stock' : 
+                  product.stock < 10 ? `Only ${product.stock} left` :
+                  'In Stock'}
               </span>
             </div>
 
@@ -199,7 +207,7 @@ function ProductDetail() {
                 </span>
                 <button
                   onClick={() => updateQuantity(1)}
-                  disabled={quantity >= Number(product.stock)}
+                  disabled={quantity >= product.stock}
                   className="bg-gray-700 p-3 rounded-lg hover:bg-green-600 hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300"
                 >
                   <i className="bi bi-plus text-xl"></i>
@@ -212,34 +220,18 @@ function ProductDetail() {
               )}
             </div>
 
-            {/* Payment Method */}
-            <div className="mb-6">
-              <label className="block text-gray-300 text-sm font-semibold mb-2">
-                Payment Method
-              </label>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 text-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="cash">Cash on Delivery</option>
-                <option value="card">Credit/Debit Card</option>
-                <option value="gcash">GCash</option>
-                <option value="paypal">PayPal</option>
-              </select>
-            </div>
-
-            {/* Order Button */}
+            {/* Add to Cart Button */}
             <button
-              onClick={handleOrder}
-              disabled={Number(product.stock) === 0}
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
               className={`w-full py-4 rounded-lg font-semibold text-lg transition-all duration-200 ${
-                Number(product.stock) === 0
+                product.stock === 0
                   ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                   : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-blue-500/50 transform hover:scale-105 active:scale-95'
               }`}
             >
-              {Number(product.stock) === 0 ? 'Out of Stock' : 'Place Order'}
+              <i className="bi bi-cart-plus mr-2"></i>
+              {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
             </button>
           </div>
         </div>

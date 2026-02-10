@@ -27,7 +27,7 @@ router.post("/", (req, res) => {
   // Validate stock & compute total
   for (const item of items) {
     const product = db.products.find(
-      (p) => String(p.id) === String(item.productId)
+      (p) => p.id === item.productId
     );
 
     if (!product) {
@@ -52,14 +52,14 @@ router.post("/", (req, res) => {
   // Deduct stock
   items.forEach((item) => {
     const product = db.products.find(
-      (p) => String(p.id) === String(item.productId)
+      (p) => p.id === item.productId
     );
-    product.stock = Number(product.stock) - Number(item.quantity);
+    product.stock = product.stock - item.quantity;
   });
 
   const newOrder = {
-    id: String(db.orders.length + 1),
-    userId: String(userId),
+    id: db.orders.length + 1,
+    userId: userId,
     items,
     totalAmount,
     status: "pending",
@@ -87,7 +87,7 @@ router.get("/", (req, res) => {
 router.get("/user/:userId", (req, res) => {
   const db = readDB();
   const orders = db.orders.filter(
-    (o) => String(o.userId) === String(req.params.userId)
+    (o) => o.userId === Number(req.params.userId)
   );
 
   res.json(orders);
@@ -99,7 +99,7 @@ router.get("/user/:userId", (req, res) => {
 router.put("/:id/status", (req, res) => {
   const db = readDB();
   const order = db.orders.find(
-    (o) => String(o.id) === String(req.params.id)
+    (o) => o.id === Number(req.params.id)
   );
 
   if (!order) {
