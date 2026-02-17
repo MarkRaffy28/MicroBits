@@ -17,7 +17,7 @@ function Home() {
             <h2 className="text-3xl md:text-5xl font-bold text-yellow-400 mt-3">Up to 30% OFF</h2>
             <p className="mt-4 text-gray-300">Limited time only. While stocks last.</p>
             <NavLink
-              to="/shop"
+              to="/user/shop"
               className="inline-block bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xl font-bold px-8 py-3 rounded-lg mt-6 transition-colors"
             >
               Shop Now

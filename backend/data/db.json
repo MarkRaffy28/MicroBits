@@ -1,21 +1,6 @@
 {
   "orders": [
     {
-      "id": 1,
-      "userId": 1,
-      "items": [
-        {
-          "productId": 3,
-          "quantity": 1,
-          "price": 4.2
-        }
-      ],
-      "totalAmount": 4.2,
-      "status": "pending",
-      "paymentMethod": "cash",
-      "createdAt": "2026-02-07T12:51:47.958Z"
-    },
-    {
       "id": 2,
       "userId": 1,
       "items": [
@@ -36,13 +21,13 @@
       "items": [
         {
           "productId": 1,
-          "quantity": 1,
+          "quantity": 3,
           "price": 8.99
         }
       ],
-      "totalAmount": 8.99,
+      "totalAmount": 26.97,
       "status": "pending",
-      "paymentMethod": "cash",
+      "paymentMethod": "GCash",
       "createdAt": "2026-02-07T13:22:56.438Z"
     },
     {
@@ -64,6 +49,21 @@
       "status": "pending",
       "paymentMethod": "cash",
       "createdAt": "2026-02-10T12:06:28.086Z"
+    },
+    {
+      "id": 5,
+      "userId": 1,
+      "items": [
+        {
+          "productId": 5,
+          "quantity": 1,
+          "price": 6
+        }
+      ],
+      "totalAmount": 6,
+      "status": "pending",
+      "paymentMethod": "PayPal",
+      "createdAt": "2026-02-17T12:18:59.484Z"
     }
   ],
   "products": [
@@ -73,7 +73,7 @@
       "category": "Microcontroller",
       "description": "WiFi + Bluetooth, 38 pins",
       "price": 8.99,
-      "stock": 3
+      "stock": 2
     },
     {
       "id": 2,
@@ -105,7 +105,7 @@
       "category": "Display",
       "description": "0.96 inch I2C 128x64",
       "price": 6,
-      "stock": 30
+      "stock": 29
     },
     {
       "id": 6,
@@ -161,23 +161,48 @@
       "id": 1,
       "username": "admin",
       "password": "admin123",
-      "role": "admin"
+      "role": "admin",
+      "cart": []
     },
     {
       "id": 2,
       "username": "user",
+      "email": "",
       "password": "user123",
+      "firstName": "",
+      "middleName": "",
+      "lastName": "",
+      "phoneNumber": "",
+      "address": "",
       "role": "user",
+      "createdAt": "",
       "cart": [
         {
           "productId": 4,
-          "quantity": 2
+          "quantity": 1
         },
         {
           "productId": 1,
+          "quantity": 2
+        },
+        {
+          "productId": 3,
           "quantity": 3
         }
       ]
+    },
+    {
+      "id": 4,
+      "username": "skibidi",
+      "email": "",
+      "password": "123456",
+      "firstName": "Skibidi",
+      "middleName": "",
+      "lastName": "Sigma",
+      "phoneNumber": "",
+      "address": "",
+      "role": "user",
+      "createdAt": "2026-02-17T13:41:19.637Z"
     }
   ]
 }

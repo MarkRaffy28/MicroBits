@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { ReactComponent as Logo } from "../assets/logo.svg"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -166,9 +166,9 @@ const Login = () => {
 
             <p className="text-center text-sm text-gray-400 mt-6">
               Don't have an account?{' '}
-              <a href="#" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">
+              <Link to="/register" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">
                 Sign up
-              </a>
+              </Link>
             </p>
           </div>
         </ElectricBorder>

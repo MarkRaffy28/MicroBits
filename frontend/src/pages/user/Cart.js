@@ -11,7 +11,7 @@ function Cart() {
   const navigate = useNavigate();
   const [cart, setCart] = useState([]);
   const [products, setProducts] = useState([]);
-  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const { fetchCartCount } = useCart();
@@ -29,7 +29,7 @@ function Cart() {
   useEffect(() => {
     const correctCartQuantities = async () => {
       let needsUpdate = false;
-      
+
       for (const item of cart) {
         const product = getProductDetails(item.productId);
         if (product && item.quantity > product.stock) {
@@ -44,7 +44,7 @@ function Cart() {
           }
         }
       }
-      
+
       if (needsUpdate) {
         await fetchCartAndProducts();
         setMessage("⚠️ Some quantities were adjusted to match available stock");
@@ -89,8 +89,8 @@ function Cart() {
 
   const updateCartQuantity = async (productId, newQuantity) => {
     const product = getProductDetails(productId);
-    
-    if (newQuantity >product.stock) {
+
+    if (newQuantity > product.stock) {
       setMessage(`❌ Not enough stock! Only ${product.stock} available`);
       return;
     }
@@ -135,7 +135,9 @@ function Cart() {
         return;
       }
       if (item.quantity > Number(product.stock)) {
-        setMessage(`❌ ${product.name}: Only ${product.stock} available, but you have ${item.quantity} in cart`);
+        setMessage(
+          `❌ ${product.name}: Only ${product.stock} available, but you have ${item.quantity} in cart`,
+        );
         return;
       }
     }
@@ -154,14 +156,14 @@ function Cart() {
       };
 
       await axios.post(ORDERS_URL, orderData);
-      
+
       // Clear cart after successful order
       await axios.delete(`${CART_URL}/${user.id}`);
       fetchCartCount();
-      
+
       setMessage("✅ Order placed successfully!");
       setCart([]);
-      
+
       setTimeout(() => {
         navigate("/user");
       }, 1500);
@@ -199,7 +201,9 @@ function Cart() {
       {/* Message Toast */}
       {message && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
-          <div className={`${message.includes('❌') ? 'bg-red-600' : 'bg-green-600'} text-white px-6 py-3 rounded-lg shadow-2xl`}>
+          <div
+            className={`${message.includes("❌") ? "bg-red-600" : "bg-green-600"} text-white px-6 py-3 rounded-lg shadow-2xl`}
+          >
             {message}
           </div>
         </div>
@@ -255,7 +259,7 @@ function Cart() {
                     )}
 
                     <div className="flex-1 min-w-0">
-                      <h3 
+                      <h3
                         onClick={() => handleProductClick(product.id)}
                         className="font-semibold text-gray-100 text-lg mb-1 cursor-pointer hover:text-blue-400 transition-colors"
                       >
@@ -271,7 +275,9 @@ function Cart() {
 
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}
+                        onClick={() =>
+                          updateCartQuantity(item.productId, item.quantity - 1)
+                        }
                         className="bg-gray-700 p-2 rounded-lg hover:bg-red-600 hover:text-white transition-all text-gray-300"
                       >
                         <i className="bi bi-dash text-lg"></i>
@@ -280,7 +286,9 @@ function Cart() {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}
+                        onClick={() =>
+                          updateCartQuantity(item.productId, item.quantity + 1)
+                        }
                         className="bg-gray-700 p-2 rounded-lg hover:bg-green-600 hover:text-white transition-all text-gray-300"
                       >
                         <i className="bi bi-plus text-lg"></i>
@@ -305,7 +313,9 @@ function Cart() {
 
             {/* Order Summary */}
             <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-              <h2 className="text-xl font-bold text-gray-100 mb-4">Order Summary</h2>
+              <h2 className="text-xl font-bold text-gray-100 mb-4">
+                Order Summary
+              </h2>
 
               {/* Payment Method */}
               <div className="mb-6">
@@ -317,21 +327,26 @@ function Cart() {
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="w-full bg-gray-700 border border-gray-600 text-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="cash">Cash on Delivery</option>
-                  <option value="card">Credit/Debit Card</option>
-                  <option value="gcash">GCash</option>
-                  <option value="paypal">PayPal</option>
+                  <option value="Cash on Delivery">Cash on Delivery</option>
+                  <option value="Credit Card">Credit Card</option>
+                  <option value="Debit Card">Debit Card</option>
+                  <option value="GCash">GCash</option>
+                  <option value="PayPal">PayPal</option>
                 </select>
               </div>
 
               <div className="flex justify-between items-center mb-3 text-gray-300">
                 <span>Items ({getTotalItems()}):</span>
-                <span className="font-semibold">${getTotalPrice().toFixed(2)}</span>
+                <span className="font-semibold">
+                  ${getTotalPrice().toFixed(2)}
+                </span>
               </div>
 
               <div className="border-t border-gray-700 pt-3 mb-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold text-gray-200">Total:</span>
+                  <span className="text-lg font-semibold text-gray-200">
+                    Total:
+                  </span>
                   <span className="text-3xl font-bold text-blue-400">
                     ${getTotalPrice().toFixed(2)}
                   </span>

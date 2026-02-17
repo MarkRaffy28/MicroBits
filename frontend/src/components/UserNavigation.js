@@ -42,6 +42,8 @@ function UserNavigation() {
   const navItems = [
     { path: "/user", label: "Home" },
     { path: "/user/shop", label: "Shop" },
+    { path: "/user/orders/all", label: "Orders" },
+    { path: "/user/profile", label: "Profile" },
   ];
 
   const getNavLinkClasses = (path, isMobile = false) => {

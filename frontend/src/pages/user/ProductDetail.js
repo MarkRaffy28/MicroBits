@@ -109,7 +109,7 @@ function ProductDetail() {
           <i className="bi bi-exclamation-triangle text-red-500 text-6xl mb-4"></i>
           <p className="text-gray-400 text-xl mb-4">Product not found</p>
           <button
-            onClick={() => navigate("/user")}
+            onClick={() => navigate("/user/shop")}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
           >
             Back to Shop
@@ -133,7 +133,7 @@ function ProductDetail() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <button
-          onClick={() => navigate("/user")}
+          onClick={() => navigate("/user/shop")}
           className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
         >
           <i className="bi bi-arrow-left"></i>

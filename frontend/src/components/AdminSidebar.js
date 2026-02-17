@@ -12,7 +12,9 @@ const navItems = [
     path: "/admin/users",
     icon: "bi-person",
     submenu: [
-      { label: "All Users", path: "/admin" },
+      { label: "All Users", path: "/admin/users/all" },
+      { label: "Regular Users", path: "/admin/users/user" },
+      { label: "Admin Users", path: "/admin/users/admin" },
     ],
   },
   {
@@ -22,12 +24,13 @@ const navItems = [
   },
   {
     label: "Orders",
-    path: "/admin/all_orders",
-    icon: "bi-truck",
+    path: "/admin/orders/all",
+    icon: "bi-bag-dash",
     submenu: [
-      { label: "All Orders", path: "/admin/all_orders" },
-      { label: "Pending Orders", path: "/admin/pending_orders" },
-      { label: "Completed Orders", path: "/admin/completed_orders" }
+      { label: "All Orders", path: "/admin/orders/all" },
+      { label: "Pending Orders", path: "/admin/orders/pending" },
+      { label: "Completed Orders", path: "/admin/orders/completed" },
+      { label: "Cancelled Orders", path: "/admin/orders/cancelled" }
     ],
   },
 ];

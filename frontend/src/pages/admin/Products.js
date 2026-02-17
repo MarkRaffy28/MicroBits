@@ -1,9 +1,32 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { useLocation, useOutletContext } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
+import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
 import "../../styles/StyleSheet.css";
 
 const API_URL = "http://localhost:5000/api/products";
+
+/* ─── Toast Component ─── */
+const Toast = ({ toasts, removeToast }) => (
+  <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2">
+    {toasts.map((t) => (
+      <div
+        key={t.id}
+        className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium min-w-[260px] animate-slideUp
+          ${t.type === "success" ? "bg-green-600" : t.type === "error" ? "bg-red-600" : "bg-blue-600"}`}
+      >
+        <i className={`bi text-base ${
+          t.type === "success" ? "bi-check-circle-fill" :
+          t.type === "error"   ? "bi-x-circle-fill"    : "bi-info-circle-fill"
+        }`} />
+        <span className="flex-1">{t.message}</span>
+        <button onClick={() => removeToast(t.id)} className="opacity-70 hover:opacity-100 transition-opacity">
+          <i className="bi bi-x" />
+        </button>
+      </div>
+    ))}
+  </div>
+);
 
 function Products() {
   const { setPageTitle } = useOutletContext();
@@ -25,6 +48,15 @@ function Products() {
     }
   }, []);
 
+  /* ─── Toast ─── */
+  const [toasts, setToasts] = useState([]);
+  const addToast = (message, type = "success") => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => removeToast(id), 3500);
+  };
+  const removeToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
+
   // MODAL
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -44,7 +76,7 @@ function Products() {
   };
   const handleEditShow = (product) => {
     setSelectedProduct(product);
-    setEditingProduct({...product})
+    setEditingProduct({...product});
     setImagePreview(product.image ? `http://localhost:5000${product.image}` : null);
     setShowEditModal(true);
   };
@@ -70,122 +102,168 @@ function Products() {
     setProducts(response.data);
   };
 
-  // Handle image selection
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setImageFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
+      reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
     }
   };
 
   // ADD
   const [newProduct, setNewProduct] = useState({
-    name: "",
-    category: "",
-    description: "",
-    price: "",
-    stock: "",
+    name: "", category: "", description: "", price: "", stock: "",
   });
 
   const addProduct = async (e) => {
     e.preventDefault();
+    try {
+      const nextId = products.length > 0
+        ? Math.max(...products.map((p) => parseInt(p.id))) + 1
+        : 1;
 
-    const nextId = products.length > 0 
-      ? Math.max(...products.map(p => parseInt(p.id))) + 1 
-      : 1;
+      const formData = new FormData();
+      formData.append("id", nextId.toString());
+      formData.append("name", newProduct.name);
+      formData.append("category", newProduct.category);
+      formData.append("description", newProduct.description);
+      formData.append("price", newProduct.price);
+      formData.append("stock", newProduct.stock);
+      if (imageFile) formData.append("image", imageFile);
 
-    const formData = new FormData();
-    formData.append('id', nextId.toString());
-    formData.append('name', newProduct.name);
-    formData.append('category', newProduct.category);
-    formData.append('description', newProduct.description);
-    formData.append('price', newProduct.price);
-    formData.append('stock', newProduct.stock);
-    
-    if (imageFile) {
-      formData.append('image', imageFile);
+      const response = await axios.post(API_URL, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setProducts([...products, response.data]);
+      setNewProduct({ name: "", category: "", description: "", price: "", stock: "" });
+      setImageFile(null);
+      setImagePreview(null);
+      handleAddClose();
+      addToast(`"${response.data.name}" added successfully.`, "success");
+    } catch {
+      addToast("Failed to add product. Please try again.", "error");
     }
-
-    const response = await axios.post(API_URL, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    
-    setProducts([...products, response.data]);
-    setNewProduct({
-      name: "",
-      category: "",
-      description: "",
-      price: "",
-      stock: "",
-    });
-    setImageFile(null);
-    setImagePreview(null);
-    handleAddClose();
   };
 
   // EDIT
   const [editingProduct, setEditingProduct] = useState({
-    name: "",
-    category: "",
-    description: "",
-    price: "",
-    stock: "",
+    name: "", category: "", description: "", price: "", stock: "",
   });
 
   const editProduct = async (e, id) => {
     e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append("name", editingProduct.name);
+      formData.append("category", editingProduct.category);
+      formData.append("description", editingProduct.description);
+      formData.append("price", editingProduct.price);
+      formData.append("stock", editingProduct.stock);
+      if (imageFile) formData.append("image", imageFile);
 
-    const formData = new FormData();
-    formData.append('name', editingProduct.name);
-    formData.append('category', editingProduct.category);
-    formData.append('description', editingProduct.description);
-    formData.append('price', editingProduct.price);
-    formData.append('stock', editingProduct.stock);
-    
-    if (imageFile) {
-      formData.append('image', imageFile);
+      const response = await axios.put(`${API_URL}/${id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setProducts(products.map((p) => (p.id === id ? response.data : p)));
+      setEditingProduct({ name: "", category: "", description: "", price: "", stock: "" });
+      setImageFile(null);
+      setImagePreview(null);
+      handleEditClose();
+      addToast(`"${response.data.name}" updated successfully.`, "success");
+    } catch {
+      addToast("Failed to update product. Please try again.", "error");
     }
-
-    const response = await axios.put(`${API_URL}/${id}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    
-    setProducts(
-      products.map((product) =>
-        product.id === id ? response.data : product
-      )
-    );
-    setEditingProduct(null);
-    setEditingProduct({
-      name: "",
-      category: "",
-      description: "",
-      price: "",
-      stock: "",
-    });
-    setImageFile(null);
-    setImagePreview(null);
-    handleEditClose();
   };
 
   // DELETE
   const deleteProduct = async () => {
-    await axios.delete(`${API_URL}/${selectedProduct.id}`);
-    setProducts(products.filter((p) => p.id !== selectedProduct.id));
-    handleDeleteClose();
+    try {
+      await axios.delete(`${API_URL}/${selectedProduct.id}`);
+      setProducts(products.filter((p) => p.id !== selectedProduct.id));
+      handleDeleteClose();
+      addToast(`"${selectedProduct.name}" deleted.`, "success");
+    } catch {
+      addToast("Failed to delete product.", "error");
+    }
   };
+
+  /* ─── Shared styles ─── */
+  const modalOverlay = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn";
+  const modalBox     = "bg-gray-900 rounded-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto animate-slideUp";
+  const inputCls     = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white";
+
+  const productRows = products.map((product) => (
+    <>
+      <td className="text-center px-4 py-3">{product.id}</td>
+      <td className="text-center px-4 py-3">
+        {product.image ? (
+          <img
+            src={`http://localhost:5000${product.image}`}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            className="w-16 h-16 object-cover rounded mx-auto"
+          />
+        ) : (
+          <div className="w-16 h-16 bg-gray-700 rounded flex items-center justify-center mx-auto">
+            <span className="text-gray-500 text-xs">No Image</span>
+          </div>
+        )}
+      </td>
+      <td className="text-center px-4 py-3">{product.name}</td>
+      <td className="text-center px-4 py-3">{product.category}</td>
+      <td className="text-center px-4 py-3">{product.description}</td>
+      <td className="text-center px-4 py-3">${product.price}</td>
+      <td className="text-center px-4 py-3">{product.stock}</td>
+      <td className="text-center px-4 py-3">
+        <button
+          className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 text-sm px-3 py-1.5 rounded mr-2 transition-all duration-200 transform hover:scale-105"
+          onClick={(e) => { e.stopPropagation(); handleEditShow(product); }}
+        >
+          <i className="bi bi-pencil mr-1" />Edit
+        </button>
+        <button
+          className="bg-red-500 hover:bg-red-600 text-neutral-100 text-sm px-3 py-1.5 rounded transition-all duration-200 transform hover:scale-105"
+          onClick={(e) => { e.stopPropagation(); handleDeleteShow(product); }}
+        >
+          <i className="bi bi-trash mr-[3px]" />Delete
+        </button>
+      </td>
+    </>
+  ));
+
+  /* ─── Reusable image upload block ─── */
+  const ImageUpload = () => (
+    <div className="mb-4">
+      <label className="block text-sm text-gray-400 mb-2">Product Image</label>
+      <div className="flex flex-col items-center">
+        {imagePreview && (
+          <img
+            src={imagePreview}
+            alt="Preview"
+            loading="lazy"
+            decoding="async"
+            className="w-32 h-32 object-cover rounded mb-3"
+          />
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <>
+      <Toast toasts={toasts} removeToast={removeToast} />
+
       <div className="container mx-auto p-4">
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse">
@@ -202,219 +280,66 @@ function Products() {
               </tr>
             </thead>
             <tbody>
-              {products.map((product) => (
-                <tr 
-                  key={product.id} 
-                  className="whitespace-nowrap hover:bg-gray-800 transition-colors duration-200"
-                >
-                  <td className="text-center px-4 py-3">{product.id}</td>
-                  <td className="text-center px-4 py-3">
-                    {product.image ? (
-                      <img 
-                        src={`http://localhost:5000${product.image}`} 
-                        alt={product.name}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-16 h-16 object-cover rounded mx-auto"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 bg-gray-700 rounded flex items-center justify-center mx-auto">
-                        <span className="text-gray-500 text-xs">No Image</span>
-                      </div>
-                    )}
-                  </td>
-                  <td className="text-center px-4 py-3">{product.name}</td>
-                  <td className="text-center px-4 py-3">{product.category}</td>
-                  <td className="text-center px-4 py-3">{product.description}</td>
-                  <td className="text-center px-4 py-3">${product.price}</td>
-                  <td className="text-center px-4 py-3">{product.stock}</td>
-                  <td className="text-center px-4 py-3">
-                    <button
-                      className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 text-sm px-3 py-1.5 rounded mr-2 transition-all duration-200 transform hover:scale-105"
-                      onClick={() => handleEditShow(product)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="bg-red-500 hover:bg-red-600 text-neutral-100 text-sm px-3 py-1.5 rounded transition-all duration-200 transform hover:scale-105"
-                      onClick={() => handleDeleteShow(product)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              <AnimatedTableRows
+                items={productRows}
+                onItemSelect={(item, index) => console.log("Selected product:", products[index])}
+                enableArrowNavigation={true}
+              />
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Add Product Modal */}
+      {/* ─────────── ADD MODAL ─────────── */}
       {showAddModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn"
-          onClick={handleAddClose}
-        >
-          <div 
-            className="bg-gray-900 rounded-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto animate-slideUp"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className={modalOverlay} onClick={handleAddClose}>
+          <div className={modalBox} onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center p-4">
               <h2 className="text-xl font-bold w-full text-center">ADD PRODUCT</h2>
-              <button
-                onClick={handleAddClose}
-                className="hover:opacity-70 text-2xl leading-none transition-opacity duration-200"
-              >
-                &times;
-              </button>
+              <button onClick={handleAddClose} className="hover:opacity-70 text-2xl leading-none transition-opacity duration-200">&times;</button>
             </div>
             <div className="p-4">
               <form onSubmit={addProduct}>
-                {/* Image Upload */}
-                <div className="mb-4">
-                  <label className="block text-sm text-gray-400 mb-2">Product Image</label>
-                  <div className="flex flex-col items-center">
-                    {imagePreview && (
-                      <img 
-                        src={imagePreview} 
-                        alt="Preview" 
-                        loading="lazy"
-                        decoding="async"
-                        className="w-32 h-32 object-cover rounded mb-3"
-                      />
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-                    />
-                  </div>
+                <ImageUpload />
+                <div className="mb-3 relative">
+                  <input type="text" id="add_name" placeholder=" " value={newProduct.name}
+                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                    required className={inputCls} />
+                  <label htmlFor="add_name" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Name</label>
                 </div>
-
-                <div className="mb-3">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      id="add_name"
-                      placeholder=" "
-                      value={newProduct.name}
-                      onChange={(e) =>
-                        setNewProduct({ ...newProduct, name: e.target.value })
-                      }
-                      required
-                      className="w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
-                    />
-                    <label
-                      htmlFor="add_name"
-                      className="absolute left-3 top-1 text-xs transition-all duration-200 pointer-events-none text-gray-400"
-                    >
-                      Name
-                    </label>
-                  </div>
+                <div className="mb-3 relative">
+                  <input type="text" id="add_category" placeholder=" " value={newProduct.category}
+                    onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                    required className={inputCls} />
+                  <label htmlFor="add_category" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Category</label>
                 </div>
-                <div className="mb-3">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      id="add_category"
-                      placeholder=" "
-                      value={newProduct.category}
-                      onChange={(e) =>
-                        setNewProduct({ ...newProduct, category: e.target.value })
-                      }
-                      required
-                      className="w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
-                    />
-                    <label
-                      htmlFor="add_category"
-                      className="absolute left-3 top-1 text-xs transition-all duration-200 pointer-events-none text-gray-400"
-                    >
-                      Category
-                    </label>
-                  </div>
-                </div>
-                <div className="mb-3">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      id="add_description"
-                      placeholder=" "
-                      value={newProduct.description}
-                      onChange={(e) =>
-                        setNewProduct({
-                          ...newProduct,
-                          description: e.target.value,
-                        })
-                      }
-                      required
-                      className="w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
-                    />
-                    <label
-                      htmlFor="add_description"
-                      className="absolute left-3 top-1 text-xs transition-all duration-200 pointer-events-none text-gray-400"
-                    >
-                      Description
-                    </label>
-                  </div>
+                <div className="mb-3 relative">
+                  <input type="text" id="add_description" placeholder=" " value={newProduct.description}
+                    onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                    required className={inputCls} />
+                  <label htmlFor="add_description" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Description</label>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="mb-3">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        id="add_price"
-                        placeholder=" "
-                        value={newProduct.price}
-                        onChange={(e) =>
-                          setNewProduct({ ...newProduct, price: e.target.value })
-                        }
-                        required
-                        className="w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
-                      />
-                      <label
-                        htmlFor="add_price"
-                        className="absolute left-3 top-1 text-xs transition-all duration-200 pointer-events-none text-gray-400"
-                      >
-                        Price
-                      </label>
-                    </div>
+                  <div className="mb-3 relative">
+                    <input type="number" id="add_price" placeholder=" " value={newProduct.price}
+                      onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                      required className={inputCls} />
+                    <label htmlFor="add_price" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Price</label>
                   </div>
-                  <div className="mb-3">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        id="add_stock"
-                        placeholder=" "
-                        value={newProduct.stock}
-                        onChange={(e) =>
-                          setNewProduct({ ...newProduct, stock: e.target.value })
-                        }
-                        required
-                        className="w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
-                      />
-                      <label
-                        htmlFor="add_stock"
-                        className="absolute left-3 top-1 text-xs transition-all duration-200 pointer-events-none text-gray-400"
-                      >
-                        Stock
-                      </label>
-                    </div>
+                  <div className="mb-3 relative">
+                    <input type="number" id="add_stock" placeholder=" " value={newProduct.stock}
+                      onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                      required className={inputCls} />
+                    <label htmlFor="add_stock" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Stock</label>
                   </div>
                 </div>
-                
                 <div className="pt-2 flex justify-center gap-3">
-                  <button
-                    type="button"
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-all duration-200 transform hover:scale-105"
-                    onClick={handleAddClose}
-                  >
+                  <button type="button" onClick={handleAddClose}
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-all duration-200 transform hover:scale-105">
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-all duration-200 transform hover:scale-105"
-                  >
+                  <button type="submit"
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-all duration-200 transform hover:scale-105">
                     Add
                   </button>
                 </div>
@@ -424,169 +349,56 @@ function Products() {
         </div>
       )}
 
-      {/* Edit Product Modal */}
+      {/* ─────────── EDIT MODAL ─────────── */}
       {showEditModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn"
-          onClick={handleEditClose}
-        >
-          <div 
-            className="bg-gray-900 rounded-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto animate-slideUp"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className={modalOverlay} onClick={handleEditClose}>
+          <div className={modalBox} onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center p-4">
               <h2 className="text-xl font-bold w-full text-center">EDIT PRODUCT</h2>
-              <button
-                onClick={handleEditClose}
-                className="hover:opacity-70 text-2xl leading-none transition-opacity duration-200"
-              >
-                &times;
-              </button>
+              <button onClick={handleEditClose} className="hover:opacity-70 text-2xl leading-none transition-opacity duration-200">&times;</button>
             </div>
             <div className="p-4">
               <form onSubmit={(e) => editProduct(e, selectedProduct.id)}>
-                {/* Image Upload */}
-                <div className="mb-4">
-                  <label className="block text-sm text-gray-400 mb-2">Product Image</label>
-                  <div className="flex flex-col items-center">
-                    {imagePreview && (
-                      <img 
-                        src={imagePreview} 
-                        alt="Preview" 
-                        loading="lazy"
-                        decoding="async"
-                        className="w-32 h-32 object-cover rounded mb-3"
-                      />
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-                    />
-                  </div>
+                <ImageUpload />
+                <div className="mb-3 relative">
+                  <input type="text" id="edit_name" placeholder=" " value={editingProduct.name}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                    required className={inputCls} />
+                  <label htmlFor="edit_name" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Name</label>
                 </div>
-
-                <div className="mb-3">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      id="edit_name"
-                      placeholder=" "
-                      value={editingProduct.name}
-                      onChange={(e) =>
-                        setEditingProduct({ ...editingProduct, name: e.target.value })
-                      }
-                      required
-                      className="w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
-                    />
-                    <label
-                      htmlFor="edit_name"
-                      className="absolute left-3 top-1 text-xs transition-all duration-200 pointer-events-none text-gray-400"
-                    >
-                      Name
-                    </label>
-                  </div>
+                <div className="mb-3 relative">
+                  <input type="text" id="edit_category" placeholder=" " value={editingProduct.category}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                    required className={inputCls} />
+                  <label htmlFor="edit_category" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Category</label>
                 </div>
-                <div className="mb-3">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      id="edit_category"
-                      placeholder=" "
-                      value={editingProduct.category}
-                      onChange={(e) =>
-                        setEditingProduct({ ...editingProduct, category: e.target.value })
-                      }
-                      required
-                      className="w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
-                    />
-                    <label
-                      htmlFor="edit_category"
-                      className="absolute left-3 top-1 text-xs transition-all duration-200 pointer-events-none text-gray-400"
-                    >
-                      Category
-                    </label>
-                  </div>
-                </div>
-                <div className="mb-3">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      id="edit_description"
-                      placeholder=" "
-                      value={editingProduct.description}
-                      onChange={(e) =>
-                        setEditingProduct({ ...editingProduct, description: e.target.value })
-                      }
-                      required
-                      className="w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
-                    />
-                    <label
-                      htmlFor="edit_description"
-                      className="absolute left-3 top-1 text-xs transition-all duration-200 pointer-events-none text-gray-400"
-                    >
-                      Description
-                    </label>
-                  </div>
+                <div className="mb-3 relative">
+                  <input type="text" id="edit_description" placeholder=" " value={editingProduct.description}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                    required className={inputCls} />
+                  <label htmlFor="edit_description" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Description</label>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="mb-3">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        id="edit_price"
-                        placeholder=" "
-                        value={editingProduct.price}
-                        onChange={(e) =>
-                          setEditingProduct({ ...editingProduct, price: e.target.value })
-                        }
-                        required
-                        className="w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
-                      />
-                      <label
-                        htmlFor="edit_price"
-                        className="absolute left-3 top-1 text-xs transition-all duration-200 pointer-events-none text-gray-400"
-                      >
-                        Price
-                      </label>
-                    </div>
+                  <div className="mb-3 relative">
+                    <input type="number" id="edit_price" placeholder=" " value={editingProduct.price}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
+                      required className={inputCls} />
+                    <label htmlFor="edit_price" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Price</label>
                   </div>
-                  <div className="mb-3">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        id="edit_stock"
-                        placeholder=" "
-                        value={editingProduct.stock}
-                        onChange={(e) =>
-                          setEditingProduct({ ...editingProduct, stock: e.target.value })
-                        }
-                        required
-                        className="w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
-                      />
-                      <label
-                        htmlFor="edit_stock"
-                        className="absolute left-3 top-1 text-xs transition-all duration-200 pointer-events-none text-gray-400"
-                      >
-                        Stock
-                      </label>
-                    </div>
+                  <div className="mb-3 relative">
+                    <input type="number" id="edit_stock" placeholder=" " value={editingProduct.stock}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
+                      required className={inputCls} />
+                    <label htmlFor="edit_stock" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Stock</label>
                   </div>
                 </div>
-                
                 <div className="pt-2 flex justify-center gap-3">
-                  <button
-                    type="button"
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-all duration-200 transform hover:scale-105"
-                    onClick={handleEditClose}
-                  >
+                  <button type="button" onClick={handleEditClose}
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-all duration-200 transform hover:scale-105">
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-all duration-200 transform hover:scale-105"
-                  >
+                  <button type="submit"
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-all duration-200 transform hover:scale-105">
                     Update
                   </button>
                 </div>
@@ -596,43 +408,27 @@ function Products() {
         </div>
       )}
 
-      {/* Delete Product Modal */}
+      {/* ─────────── DELETE MODAL ─────────── */}
       {showDeleteModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn"
-          onClick={handleDeleteClose}
-        >
-          <div 
-            className="bg-gray-900 rounded-lg max-w-md w-full mx-4 animate-slideUp"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className={modalOverlay} onClick={handleDeleteClose}>
+          <div className="bg-gray-900 rounded-lg max-w-md w-full mx-4 animate-slideUp" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center p-4">
               <h2 className="text-xl font-bold w-full text-center">DELETE?</h2>
-              <button
-                onClick={handleDeleteClose}
-                className="hover:opacity-70 text-2xl leading-none transition-opacity duration-200"
-              >
-                &times;
-              </button>
+              <button onClick={handleDeleteClose} className="hover:opacity-70 text-2xl leading-none transition-opacity duration-200">&times;</button>
             </div>
             <div className="p-4 text-center">
-              <i className="fa-solid fa-triangle-exclamation text-6xl text-red-500 mb-3 animate-bounce"></i>
+              <i className="bi bi-exclamation-triangle text-6xl text-red-500 mb-3 animate-bounce" />
               <p className="mb-0 px-2">
-                Are you sure you want to delete this product? This action cannot be
-                undone.
+                Are you sure you want to delete <span className="font-bold">"{selectedProduct?.name}"</span>? This action cannot be undone.
               </p>
             </div>
             <div className="p-4 flex justify-center gap-3">
-              <button
-                className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded transition-all duration-200 transform hover:scale-105"
-                onClick={handleDeleteClose}
-              >
+              <button onClick={handleDeleteClose}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded transition-all duration-200 transform hover:scale-105">
                 Close
               </button>
-              <button
-                className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded transition-all duration-200 transform hover:scale-105"
-                onClick={deleteProduct}
-              >
+              <button onClick={deleteProduct}
+                className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded transition-all duration-200 transform hover:scale-105">
                 Yes, Delete
               </button>
             </div>
@@ -642,6 +438,5 @@ function Products() {
     </>
   );
 }
-
 
 export default Products;

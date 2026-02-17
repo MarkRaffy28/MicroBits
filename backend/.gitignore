@@ -22,4 +22,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+data/db.json
 data/images/products/
+data/images/users/
