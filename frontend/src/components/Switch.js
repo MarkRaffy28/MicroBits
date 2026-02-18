@@ -1,14 +1,6 @@
 import React from "react";
 
-/**
- * Switch component
- * Props:
- *  - checked: boolean
- *  - onChange: (checked: boolean) => void
- *  - label: string
- *  - id: string (optional)
- */
-const Switch = ({ checked, onChange, label, id = "switch" }) => {
+function Switch({ checked, onChange, label, id = "switch" }) {
   return (
     <label
       htmlFor={id}

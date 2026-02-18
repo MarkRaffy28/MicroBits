@@ -1,29 +1,8 @@
 import axios from "axios";
 import React, { useEffect, useState, useRef } from "react";
+import Toast from "../../components/Toast";
 
 const BASE = "http://localhost:5000/api";
-
-/* ─── Toast ─── */
-const Toast = ({ toasts, removeToast }) => (
-  <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2">
-    {toasts.map((t) => (
-      <div
-        key={t.id}
-        className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium min-w-[260px] animate-slideUp
-          ${t.type === "success" ? "bg-green-600" : t.type === "error" ? "bg-red-600" : "bg-blue-600"}`}
-      >
-        <i className={`bi text-base ${
-          t.type === "success" ? "bi-check-circle-fill" :
-          t.type === "error"   ? "bi-x-circle-fill"    : "bi-info-circle-fill"
-        }`} />
-        <span className="flex-1">{t.message}</span>
-        <button onClick={() => removeToast(t.id)} className="opacity-70 hover:opacity-100 transition-opacity">
-          <i className="bi bi-x" />
-        </button>
-      </div>
-    ))}
-  </div>
-);
 
 /* ─── Field with floating label ─── */
 const Field = ({
@@ -86,9 +65,10 @@ function Profile() {
   const removeToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   /* ─── Data ─── */
-  const [user,   setUser]   = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [user,     setUser]     = useState(null);
+  const [orders,   setOrders]   = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading,  setLoading]  = useState(true);
 
   /* ─── Edit sections open/close ─── */
   const [editSection, setEditSection] = useState(null); // "info" | "username" | "password" | "avatar"
@@ -116,13 +96,15 @@ function Profile() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [uRes, oRes] = await Promise.all([
+        const [uRes, oRes, pRes] = await Promise.all([
           axios.get(`${BASE}/users/${userId}`),
           axios.get(`${BASE}/orders/user/${userId}`),
+          axios.get(`${BASE}/products`),
         ]);
         const u = uRes.data;
         setUser(u);
         setOrders(oRes.data);
+        setProducts(pRes.data);
         setInfoForm({
           firstName:   u.firstName   || "",
           middleName:  u.middleName  || "",
@@ -551,7 +533,7 @@ function Profile() {
             </form>
           )}
         </Card>
-
+        
         {/* ─── Personal Info ─── */}
         <Card
           title="Personal Information"
@@ -616,15 +598,36 @@ function Profile() {
           <Card title="Cart" icon="bi-cart3">
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-gray-500 uppercase pb-1 border-b border-gray-700">
-                <span>Product Name</span>
+                <span>Product</span>
                 <span>Quantity</span>
               </div>
-              {user.cart.map((item, i) => (
-                <div key={i} className="flex justify-between items-center py-1.5 text-sm border-b border-gray-700/40 last:border-0">
-                  <span className="text-gray-300">Product #{item.productId}</span>
-                  <span className="text-white font-semibold bg-gray-700 px-2 py-0.5 rounded text-xs">x{item.quantity}</span>
-                </div>
-              ))}
+              {user.cart.map((item, i) => {
+                const product = products.find((p) => p.id === item.productId);
+                return (
+                  <div key={i} className="flex justify-between items-center gap-3 py-1.5 text-sm border-b border-gray-700/40 last:border-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {product?.image ? (
+                        <img
+                          src={`http://localhost:5000${product.image}`}
+                          alt={product.name}
+                          className="w-8 h-8 rounded object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
+                          <i className="bi bi-box text-gray-500 text-xs" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-gray-300 text-sm truncate">{product?.name ?? `Product #${item.productId}`}</p>
+                        {product?.category && (
+                          <p className="text-gray-500 text-xs">{product.category}</p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-white font-semibold bg-gray-700 px-2 py-0.5 rounded text-xs flex-shrink-0">x{item.quantity}</span>
+                  </div>
+                );
+              })}
               <p className="text-right text-xs text-gray-500 pt-1">{cartItems} item{cartItems !== 1 ? "s" : ""} in cart</p>
             </div>
           </Card>
@@ -669,7 +672,130 @@ function Profile() {
           )}
         </Card>
 
+        {/* ─── Danger Zone ─── */}
+        <Card title="Danger Zone" icon="bi-exclamation-triangle-fill">
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 p-4 bg-red-600/10 border border-red-600/30 rounded-lg">
+              <i className="bi bi-exclamation-triangle-fill text-red-400 text-xl flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-red-400 font-semibold text-sm mb-1">Delete Account</p>
+                <p className="text-gray-400 text-xs mb-3">
+                  Once you delete your account, there is no going back. All your data, orders, and cart will be permanently removed.
+                </p>
+                <button
+                  onClick={() => setEditSection("delete")}
+                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  <i className="bi bi-trash mr-1.5" />
+                  Delete My Account
+                </button>
+              </div>
+            </div>
+          </div>
+        </Card>
+
       </div>
+
+      {/* ─────────── DELETE ACCOUNT MODAL ─────────── */}
+      {editSection === "delete" && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-fadeIn"
+          onClick={() => setEditSection(null)}
+        >
+          <div
+            className="bg-gray-900 rounded-xl max-w-md w-full border border-red-600/50 animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700/50">
+              <h2 className="text-lg font-bold text-red-400 flex items-center gap-2">
+                <i className="bi bi-exclamation-triangle-fill" />
+                Delete Account?
+              </h2>
+              <button onClick={() => setEditSection(null)}
+                className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Warning list */}
+              <div className="space-y-2 bg-red-600/10 border border-red-600/30 rounded-lg p-4">
+                <p className="text-red-400 font-semibold text-sm mb-2">This action will:</p>
+                <ul className="space-y-1.5 text-gray-300 text-xs">
+                  {[
+                    "Permanently delete your account",
+                    "Remove all your personal information",
+                    "Delete your order history",
+                    "Clear your cart",
+                    "Cannot be undone",
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <i className="bi bi-x-circle text-red-400 flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Password confirmation */}
+              <div>
+                <p className="text-gray-400 text-sm mb-3">
+                  Please enter your password to confirm account deletion:
+                </p>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const pwd = e.target.confirmPassword.value;
+                    if (pwd !== user?.password) {
+                      addToast("Incorrect password.", "error");
+                      return;
+                    }
+                    try {
+                      await axios.delete(`${BASE}/users/${userId}`);
+                      localStorage.removeItem("token");
+                      localStorage.removeItem("user");
+                      addToast("Account deleted successfully.", "success");
+                      setTimeout(() => window.location.href = "/", 1500);
+                    } catch {
+                      addToast("Failed to delete account.", "error");
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="relative">
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      placeholder=" "
+                      required
+                      autoComplete="off"
+                      className="w-full px-3 pt-6 pb-2 rounded-lg border border-red-600/50 bg-gray-800 text-white text-sm
+                        focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                    <label className="absolute left-3 top-1 text-xs pointer-events-none text-red-400">
+                      Confirm Password
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditSection(null)}
+                      className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                    >
+                      Delete My Account
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

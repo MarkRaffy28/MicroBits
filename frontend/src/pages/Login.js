@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { ReactComponent as Logo } from "../assets/logo.svg"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEyeSlash, faXmarkCircle } from "@fortawesome/free-solid-svg-icons"; 
+import { faEye, faEyeSlash, faUser, faXmarkCircle } from "@fortawesome/free-solid-svg-icons"; 
 import ElectricBorder from ".././react_bits/ElectricBorder"
 
 const Login = () => {
@@ -84,15 +84,20 @@ const Login = () => {
                 <label htmlFor="email" className="block text-white text-sm font-medium mb-2">
                   Username
                 </label>
-                <input
-                  id="username"
-                  type="text"
-                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <input
+                    id="username"
+                    type="text"
+                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    <FontAwesomeIcon icon={faUser} />
+                  </span>
+                </div>
               </div>
 
               <div>

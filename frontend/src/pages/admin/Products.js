@@ -2,31 +2,10 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
+import Toast from "../../components/Toast";
 import "../../styles/StyleSheet.css";
 
 const API_URL = "http://localhost:5000/api/products";
-
-/* ─── Toast Component ─── */
-const Toast = ({ toasts, removeToast }) => (
-  <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2">
-    {toasts.map((t) => (
-      <div
-        key={t.id}
-        className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium min-w-[260px] animate-slideUp
-          ${t.type === "success" ? "bg-green-600" : t.type === "error" ? "bg-red-600" : "bg-blue-600"}`}
-      >
-        <i className={`bi text-base ${
-          t.type === "success" ? "bi-check-circle-fill" :
-          t.type === "error"   ? "bi-x-circle-fill"    : "bi-info-circle-fill"
-        }`} />
-        <span className="flex-1">{t.message}</span>
-        <button onClick={() => removeToast(t.id)} className="opacity-70 hover:opacity-100 transition-opacity">
-          <i className="bi bi-x" />
-        </button>
-      </div>
-    ))}
-  </div>
-);
 
 function Products() {
   const { setPageTitle } = useOutletContext();
@@ -219,7 +198,7 @@ function Products() {
       <td className="text-center px-4 py-3">{product.description}</td>
       <td className="text-center px-4 py-3">${product.price}</td>
       <td className="text-center px-4 py-3">{product.stock}</td>
-      <td className="text-center px-4 py-3">
+      <td className="text-center px-4 py-3 whitespace-nowrap">
         <button
           className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 text-sm px-3 py-1.5 rounded mr-2 transition-all duration-200 transform hover:scale-105"
           onClick={(e) => { e.stopPropagation(); handleEditShow(product); }}
@@ -280,11 +259,7 @@ function Products() {
               </tr>
             </thead>
             <tbody>
-              <AnimatedTableRows
-                items={productRows}
-                onItemSelect={(item, index) => console.log("Selected product:", products[index])}
-                enableArrowNavigation={true}
-              />
+              <AnimatedTableRows items={productRows} />
             </tbody>
           </table>
         </div>

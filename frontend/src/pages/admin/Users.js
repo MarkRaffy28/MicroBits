@@ -3,31 +3,10 @@ import React, { useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
 import Switch from "../../components/Switch";
+import Toast from "../../components/Toast";
 import "../../styles/StyleSheet.css";
 
 const API_URL = "http://localhost:5000/api/users";
-
-/* ─── Toast Component ─── */
-const Toast = ({ toasts, removeToast }) => (
-  <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2">
-    {toasts.map((t) => (
-      <div
-        key={t.id}
-        className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium min-w-[260px] animate-slideUp
-          ${t.type === "success" ? "bg-green-600" : t.type === "error" ? "bg-red-600" : "bg-blue-600"}`}
-      >
-        <i className={`bi text-base ${
-          t.type === "success" ? "bi-check-circle-fill" :
-          t.type === "error"   ? "bi-x-circle-fill"    : "bi-info-circle-fill"
-        }`} />
-        <span className="flex-1">{t.message}</span>
-        <button onClick={() => removeToast(t.id)} className="opacity-70 hover:opacity-100 transition-opacity">
-          <i className="bi bi-x" />
-        </button>
-      </div>
-    ))}
-  </div>
-);
 
 /* ─── Avatar ─── */
 const Avatar = ({ src, name, size = "w-10 h-10" }) => (
@@ -322,11 +301,7 @@ function Users() {
               </tr>
             </thead>
             <tbody>
-              <AnimatedTableRows
-                items={userRows}
-                onItemSelect={(item, index) => console.log("Selected user:", users[index])}
-                enableArrowNavigation={true}
-              />
+              <AnimatedTableRows items={userRows} />
             </tbody>
           </table>
         </div>
