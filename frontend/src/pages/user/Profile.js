@@ -1,6 +1,6 @@
 import axios from "axios";
 import React, { useEffect, useState, useRef } from "react";
-import Toast from "../../components/Toast";
+import { useToast } from "../../context/ToastContext";
 
 const BASE = "http://localhost:5000/api";
 
@@ -52,17 +52,9 @@ const Card = ({ title, icon, children, action }) => (
 );
 
 function Profile() {
+  const { addToast } = useToast();
   const stored = JSON.parse(localStorage.getItem("user") || "{}");
   const userId = stored.id;
-
-  /* ─── Toast ─── */
-  const [toasts, setToasts] = useState([]);
-  const addToast = (message, type = "success") => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => removeToast(id), 3500);
-  };
-  const removeToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   /* ─── Data ─── */
   const [user,     setUser]     = useState(null);
@@ -260,8 +252,6 @@ function Profile() {
 
   return (
     <>
-      <Toast toasts={toasts} removeToast={removeToast} />
-
       <div className="max-w-3xl mx-auto p-4 space-y-5">
 
         {/* ─── Hero / Avatar card ─── */}
@@ -752,8 +742,7 @@ function Profile() {
                       await axios.delete(`${BASE}/users/${userId}`);
                       localStorage.removeItem("token");
                       localStorage.removeItem("user");
-                      addToast("Account deleted successfully.", "success");
-                      setTimeout(() => window.location.href = "/", 1500);
+                      window.location.href = "/";
                     } catch {
                       addToast("Failed to delete account.", "error");
                     }

@@ -1,7 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import Toast from "../../components/Toast";
+import { useToast } from "../../context/ToastContext";
 
 const BASE = "http://localhost:5000/api";
 
@@ -21,6 +21,7 @@ const StatusBadge = ({ status }) => {
 };
 
 function OrderDetail() {
+  const { addToast } = useToast();
   const { id }   = useParams();
   const navigate = useNavigate();
   const stored   = JSON.parse(localStorage.getItem("user") || "{}");
@@ -30,15 +31,6 @@ function OrderDetail() {
   const [products, setProducts] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
-
-  /* ─── Toast ─── */
-  const [toasts, setToasts] = useState([]);
-  const addToast = (message, type = "success") => {
-    const tid = Date.now();
-    setToasts((prev) => [...prev, { id: tid, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== tid)), 3500);
-  };
-  const removeToast = (tid) => setToasts((prev) => prev.filter((t) => t.id !== tid));
 
   useEffect(() => {
     const load = async () => {
@@ -98,8 +90,6 @@ function OrderDetail() {
 
   return (
     <>
-      <Toast toasts={toasts} removeToast={removeToast} />
-
       <div className="max-w-2xl mx-auto p-4 space-y-4">
 
         {/* ─── Back + Title ─── */}

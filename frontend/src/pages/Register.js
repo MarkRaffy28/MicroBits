@@ -1,19 +1,14 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../context/ToastContext";
 import { ReactComponent as Logo } from "../assets/logo.svg";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faEye,
-  faEyeSlash,
-  faXmarkCircle,
-  faArrowLeft,
-  faCheckCircle,
-  faUser,
-} from "@fortawesome/free-solid-svg-icons";
+import { faEye, faEyeSlash, faXmarkCircle, faArrowLeft, faCheckCircle, faUser } from "@fortawesome/free-solid-svg-icons";
 import ElectricBorder from ".././react_bits/ElectricBorder";
 
 const Register = () => {
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
@@ -92,6 +87,7 @@ const Register = () => {
         address: formData.address,
         role: "user",
       });
+      addToast("User registered successfully.");
       navigate("/");
     } catch (err) {
       setFormError(err.response?.data?.message || "Registration failed. Please try again.");

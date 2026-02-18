@@ -1,7 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import Toast from "../../components/Toast";
+import { useToast } from "../../context/ToastContext";
 
 const BASE = "http://localhost:5000/api";
 
@@ -28,21 +28,13 @@ const TABS = [
 ];
 
 function UserOrders() {
+  const { addToast } = useToast();
   const { status } = useParams();
   const activeTab  = status || "all";
   const navigate   = useNavigate();
 
   const stored  = JSON.parse(localStorage.getItem("user") || "{}");
   const userId  = stored.id;
-
-  /* ─── Toast ─── */
-  const [toasts, setToasts] = useState([]);
-  const addToast = (message, type = "success") => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => removeToast(id), 3500);
-  };
-  const removeToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   /* ─── Data ─── */
   const [orders,   setOrders]   = useState([]);
@@ -117,8 +109,6 @@ function UserOrders() {
 
   return (
     <>
-      <Toast toasts={toasts} removeToast={removeToast} />
-
       <div className="max-w-3xl mx-auto p-4 space-y-4">
 
         {/* ─── Header ─── */}

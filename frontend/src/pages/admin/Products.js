@@ -1,13 +1,14 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { useToast } from "../../context/ToastContext";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
-import Toast from "../../components/Toast";
 import "../../styles/StyleSheet.css";
 
 const API_URL = "http://localhost:5000/api/products";
 
 function Products() {
+  const { addToast } = useToast();
   const { setPageTitle } = useOutletContext();
   const { setHeaderAction } = useOutletContext();
 
@@ -26,15 +27,6 @@ function Products() {
       setHeaderAction(null);
     }
   }, []);
-
-  /* ─── Toast ─── */
-  const [toasts, setToasts] = useState([]);
-  const addToast = (message, type = "success") => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => removeToast(id), 3500);
-  };
-  const removeToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   // MODAL
   const [showAddModal, setShowAddModal] = useState(false);
@@ -241,8 +233,6 @@ function Products() {
 
   return (
     <>
-      <Toast toasts={toasts} removeToast={removeToast} />
-
       <div className="container mx-auto p-4">
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse">

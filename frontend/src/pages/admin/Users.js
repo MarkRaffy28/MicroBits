@@ -1,9 +1,9 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
+import { useToast } from "../../context/ToastContext";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
 import Switch from "../../components/Switch";
-import Toast from "../../components/Toast";
 import "../../styles/StyleSheet.css";
 
 const API_URL = "http://localhost:5000/api/users";
@@ -26,21 +26,13 @@ const Avatar = ({ src, name, size = "w-10 h-10" }) => (
 );
 
 function Users() {
+  const { addToast } = useToast();
   const { role } = useParams();
-  const activeRole = role || "all";
   const { setPageTitle, setHeaderAction } = useOutletContext();
+  const activeRole = role || "all";
 
   /* ─── Full table toggle ─── */
   const [showFull, setShowFull] = useState(false);
-
-  /* ─── Toast ─── */
-  const [toasts, setToasts] = useState([]);
-  const addToast = (message, type = "success") => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => removeToast(id), 3500);
-  };
-  const removeToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   /* ─── Modal state ─── */
   const [showAddModal,    setShowAddModal]    = useState(false);
@@ -277,8 +269,6 @@ function Users() {
 
   return (
     <>
-      <Toast toasts={toasts} removeToast={removeToast} />
-
       {/* ─── Table ─── */}
       <div className="container mx-auto p-4">
         <div className="overflow-x-auto">
