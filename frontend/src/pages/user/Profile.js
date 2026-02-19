@@ -61,6 +61,7 @@ function Profile() {
   const [orders,   setOrders]   = useState([]);
   const [products, setProducts] = useState([]);
   const [loading,  setLoading]  = useState(true);
+  const [profileDeleted, setProfileDeleted] = useState(false);
 
   /* ─── Edit sections open/close ─── */
   const [editSection, setEditSection] = useState(null); // "info" | "username" | "password" | "avatar"
@@ -86,6 +87,8 @@ function Profile() {
 
   /* ─── Fetch ─── */
   useEffect(() => {
+    if (profileDeleted) return;
+
     const load = async () => {
       try {
         const [uRes, oRes, pRes] = await Promise.all([
@@ -106,12 +109,16 @@ function Profile() {
           address:     u.address     || "",
         });
         setUsernameForm({ username: u.username });
+      } catch (error) {
+        if (!profileDeleted) {
+          addToast("Failed to load profile.", "error");
+        }
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [userId]);
+  }, [userId, profileDeleted, addToast]);
 
   /* ─── Username availability check (debounced) ─── */
   const handleUsernameChange = (val) => {
@@ -242,6 +249,19 @@ function Profile() {
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
         Loading profile…
+      </div>
+    );
+  }
+
+  if (profileDeleted) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+        <svg className="animate-spin h-8 w-8 mb-3 text-green-500" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        <p className="text-green-400 font-medium">Account deleted successfully</p>
+        <p className="text-gray-500 text-sm mt-1">Redirecting to home...</p>
       </div>
     );
   }
@@ -739,11 +759,16 @@ function Profile() {
                       return;
                     }
                     try {
+                      setProfileDeleted(true); // Set flag before deletion
                       await axios.delete(`${BASE}/users/${userId}`);
                       localStorage.removeItem("token");
                       localStorage.removeItem("user");
-                      window.location.href = "/";
-                    } catch {
+                      addToast("Account deleted successfully.", "success");
+                      setTimeout(() => {
+                        window.location.href = "/";
+                      }, 1500);
+                    } catch (error) {
+                      setProfileDeleted(false);
                       addToast("Failed to delete account.", "error");
                     }
                   }}

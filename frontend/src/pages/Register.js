@@ -286,6 +286,7 @@ const Register = () => {
                           placeholder="Juan"
                           value={formData.firstName}
                           onChange={handleChange}
+                          required
                         />
                       </div>
                       <div>
@@ -298,14 +299,14 @@ const Register = () => {
                           placeholder="Dela Cruz"
                           value={formData.lastName}
                           onChange={handleChange}
+                          required
                         />
                       </div>
                     </div>
 
                     <div>
                       <Label htmlFor="middleName">
-                        Middle Name{" "}
-                        <span className="text-gray-500 font-normal">(optional)</span>
+                        Middle Name
                       </Label>
                       <input
                         id="middleName"
@@ -315,13 +316,13 @@ const Register = () => {
                         placeholder="Santos"
                         value={formData.middleName}
                         onChange={handleChange}
+                        required
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="email">
-                        Email{" "}
-                        <span className="text-gray-500 font-normal">(optional)</span>
+                        Email
                       </Label>
                       <input
                         id="email"
@@ -331,13 +332,13 @@ const Register = () => {
                         placeholder="you@example.com"
                         value={formData.email}
                         onChange={handleChange}
+                        required
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="phoneNumber">
-                        Phone Number{" "}
-                        <span className="text-gray-500 font-normal">(optional)</span>
+                        Phone Number
                       </Label>
                       <input
                         id="phoneNumber"
@@ -347,13 +348,13 @@ const Register = () => {
                         placeholder="+63 9XX XXX XXXX"
                         value={formData.phoneNumber}
                         onChange={handleChange}
+                        required
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="address">
-                        Address{" "}
-                        <span className="text-gray-500 font-normal">(optional)</span>
+                        Address
                       </Label>
                       <input
                         id="address"
@@ -363,6 +364,7 @@ const Register = () => {
                         placeholder="Street, City, Province"
                         value={formData.address}
                         onChange={handleChange}
+                        required
                       />
                     </div>
 
