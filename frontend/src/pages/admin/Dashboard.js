@@ -10,19 +10,26 @@ const BarChart = ({ data, color = "bg-blue-500" }) => {
   return (
     <div className="flex items-end gap-1 h-12">
       {data.map((d, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+        <div key={i} className="flex-1 flex flex-col items-center justify-end gap-0.5 group relative h-full">
           <div
             className={`w-full rounded-sm ${color} transition-all duration-500 opacity-80 group-hover:opacity-100`}
             style={{ height: `${(d.value / max) * 100}%`, minHeight: d.value > 0 ? 4 : 1 }}
           />
           {/* Tooltip */}
           <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-700 text-white text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-            {d.label}: {d.value}
+            {d.label}: {d.value}  
           </span>
         </div>
       ))}
     </div>
   );
+};
+
+const iconBgMap = {
+  "text-blue-400":   "bg-blue-600/20",
+  "text-green-400":  "bg-green-600/20",
+  "text-orange-400": "bg-orange-600/20",
+  "text-purple-400": "bg-purple-600/20",
 };
 
 /* ─── Stat card ─── */
@@ -37,7 +44,8 @@ const StatCard = ({ icon, label, value, sub, color, onClick, chart, chartColor }
         <p className={`text-3xl font-bold ${color}`}>{value}</p>
         {sub && <p className="text-gray-500 text-xs mt-1">{sub}</p>}
       </div>
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${color.replace("text-", "bg-").replace("400", "600").replace("300", "500")}/20`}>
+      
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${iconBgMap[color]}`}>
         <i className={`bi ${icon} text-xl ${color}`} />
       </div>
     </div>

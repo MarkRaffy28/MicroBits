@@ -25,6 +25,42 @@ const Avatar = ({ src, name, size = "w-10 h-10" }) => (
   )
 );
 
+/* ─── Reusable field ─── */
+const Field = ({ id, label, type = "text", value, onChange, required = false, disabled = false, placeholder = " " }) => {
+  const inputCls  = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white";
+  const disabledCls = "w-full px-3 pt-5 pb-2 bg-gray-800/50 border border-gray-700/50 rounded text-gray-500 cursor-not-allowed";
+  return (
+    <div className="mb-3 relative">
+      <input
+        id={id} type={type} placeholder={placeholder} value={value}
+        onChange={onChange} required={required} disabled={disabled}
+        className={disabled ? disabledCls : inputCls}
+      />
+      <label htmlFor={id} className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">{label}</label>
+    </div>
+  );
+};
+
+/* ─── Reusable image upload ─── */
+const ImageUpload = ({ imagePreview, onImageChange }) => (
+  <div className="mb-4">
+    <label className="block text-sm text-gray-400 mb-2">Profile Picture</label>
+    <div className="flex flex-col items-center gap-3">
+      {imagePreview ? (
+        <img src={imagePreview} alt="Preview" loading="lazy" decoding="async" className="w-20 h-20 object-cover rounded-full" />
+      ) : (
+        <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center">
+          <i className="bi bi-person text-3xl text-gray-500" />
+        </div>
+      )}
+      <input
+        type="file" accept="image/*" onChange={onImageChange}
+        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+      />
+    </div>
+  </div>
+);
+
 function Users() {
   const { addToast } = useToast();
   const { role } = useParams();
@@ -188,40 +224,6 @@ function Users() {
   const disabledCls  = "w-full px-3 pt-5 pb-2 bg-gray-800/50 border border-gray-700/50 rounded text-gray-500 cursor-not-allowed";
   const selectCls    = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white";
 
-  /* ─── Reusable image upload ─── */
-  const ImageUpload = () => (
-    <div className="mb-4">
-      <label className="block text-sm text-gray-400 mb-2">Profile Picture</label>
-      <div className="flex flex-col items-center gap-3">
-        {imagePreview ? (
-          <img src={imagePreview} alt="Preview" loading="lazy" decoding="async" className="w-20 h-20 object-cover rounded-full" />
-        ) : (
-          <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center">
-            <i className="bi bi-person text-3xl text-gray-500" />
-          </div>
-        )}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageChange}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-        />
-      </div>
-    </div>
-  );
-
-  /* ─── Reusable field ─── */
-  const Field = ({ id, label, type = "text", value, onChange, required = false, disabled = false, placeholder = " " }) => (
-    <div className="mb-3 relative">
-      <input
-        id={id} type={type} placeholder={placeholder} value={value}
-        onChange={onChange} required={required} disabled={disabled}
-        className={disabled ? disabledCls : inputCls}
-      />
-      <label htmlFor={id} className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">{label}</label>
-    </div>
-  );
-
   /* ─── Table rows ─── */
   const userRows = users.map((user) => (
     <>
@@ -370,7 +372,7 @@ function Users() {
             </div>
             <div className="p-4">
               <form onSubmit={addUser}>
-                <ImageUpload />
+                <ImageUpload imagePreview={imagePreview} onImageChange={handleImageChange} />
 
                 <div className="grid grid-cols-2 gap-3">
                   <Field id="add_username"  label="Username *" value={newUser.username}
@@ -429,7 +431,7 @@ function Users() {
             </div>
             <div className="p-4">
               <form onSubmit={editUser}>
-                <ImageUpload />
+                <ImageUpload imagePreview={imagePreview} onImageChange={handleImageChange} />
 
                 {/* Read-only: username & password */}
                 <div className="grid grid-cols-2 gap-3 mb-3">
