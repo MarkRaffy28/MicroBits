@@ -9,5 +9,8 @@
     "concurrently": "^8.2.2",
     "cross-env": "^10.1.0",
     "json-server": "^0.17.4"
+  },
+  "dependencies": {
+    "sass": "^1.98.0"
   }
 }
