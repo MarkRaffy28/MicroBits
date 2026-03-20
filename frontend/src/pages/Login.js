@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
+import { login } from "../firebase/services/auth";
 import { useToast } from "../context/ToastContext";
 import { ReactComponent as Logo } from "../assets/logo.svg";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -10,37 +9,33 @@ import ElectricBorder from ".././react_bits/ElectricBorder";
 import "../styles/Login.scss";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
+  const { addToast } = useToast();
+  const navigate = useNavigate();
+
+  const [usernameOrEmail, setUsernameOrEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
+  
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", {
-        username,
-        password,
-      });
-
-      const token = res.data.token;
-      const decoded = jwtDecode(token); // contains id, username, role, exp
-
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(decoded));
-
-      if (decoded.role === "admin") {
+      const user = await login(usernameOrEmail, password);
+  
+      localStorage.setItem("user", JSON.stringify(user));
+      
+      addToast("Logged in successfully!");
+      if (user.role === "admin") {
         navigate("admin");
       } else {
         navigate("user");
       }
     } catch (err) {
-      setError("Invalid username or password");
+      setError(err.message || "Invalid username or email or password");
       setIsLoading(false);
     }
   };
@@ -79,19 +74,19 @@ const Login = () => {
             <h1 className="login-title">Login to your account</h1>
 
             <form onSubmit={handleLogin} className="login-form">
-              {/* Username */}
+              {/* Username OR Email*/}
               <div className="form-group">
-                <label htmlFor="username" className="form-label">
-                  Username
+                <label htmlFor="username-or-email" className="form-label">
+                  Username or Email
                 </label>
                 <div className="input-wrapper">
                   <input
-                    id="username"
+                    id="username-or-email"
                     type="text"
                     className="form-input"
-                    placeholder="Enter your username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter your username or email"
+                    value={usernameOrEmail}
+                    onChange={(e) => setUsernameOrEmail(e.target.value)}
                     required
                   />
                   <span className="input-icon">

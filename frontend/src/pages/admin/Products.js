@@ -1,16 +1,24 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
+import {
+  getAllProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct as firebaseDeleteProduct,
+} from "../../firebase/services/products";
 import "../../styles/StyleSheet.css";
 
-const API_URL = "http://localhost:5000/api/products";
+const truncate = (text, maxWords = 10) => {
+  if (!text) return "";
+  const words = text.trim().split(/\s+/);
+  return words.length <= maxWords ? text : words.slice(0, maxWords).join(" ") + "...";
+};
 
 function Products() {
   const { addToast } = useToast();
-  const { setPageTitle } = useOutletContext();
-  const { setHeaderAction } = useOutletContext();
+  const { setPageTitle, setHeaderAction } = useOutletContext();
 
   useEffect(() => {
     setPageTitle("Products");
@@ -20,57 +28,51 @@ function Products() {
         onClick={handleAddShow}
       >
         Add
-      </button>   
+      </button>
     );
     return () => {
       setPageTitle("Admin");
       setHeaderAction(null);
-    }
+    };
   }, []);
 
-  // MODAL
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  /* ─── Modal state ─── */
+  const [showAddModal,    setShowAddModal]    = useState(false);
+  const [showEditModal,   setShowEditModal]   = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showViewModal,   setShowViewModal]   = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const handleAddClose = () => {
-    setShowAddModal(false);
-    setImagePreview(null);
-    setImageFile(null);
-  };
-  const handleAddShow = () => setShowAddModal(true);
-  const handleEditClose = () => {
-    setShowEditModal(false);
-    setImagePreview(null);
-    setImageFile(null);
-  };
-  const handleEditShow = (product) => {
+  const handleAddClose    = () => { setShowAddModal(false);    setImagePreview(null); setImageFile(null); };
+  const handleAddShow     = () =>   setShowAddModal(true);
+  const handleEditClose   = () => { setShowEditModal(false);   setImagePreview(null); setImageFile(null); };
+  const handleEditShow    = (product) => {
     setSelectedProduct(product);
-    setEditingProduct({...product});
-    setImagePreview(product.image ? `http://localhost:5000${product.image}` : null);
+    setEditingProduct({ ...product });
+    setImagePreview(product.image || null);
     setShowEditModal(true);
   };
   const handleDeleteClose = () => setShowDeleteModal(false);
-  const handleDeleteShow = (product) => {
-    setSelectedProduct(product);
-    setShowDeleteModal(true);
-  };
+  const handleDeleteShow  = (product) => { setSelectedProduct(product); setShowDeleteModal(true); };
+  const handleViewClose   = () => setShowViewModal(false);
+  const handleViewShow    = (product) => { setSelectedProduct(product); setShowViewModal(true); };
 
-  // PRODUCT STATES
+  /* ─── Product state ─── */
   const [products, setProducts] = useState([]);
 
-  // IMAGE STATES
-  const [imageFile, setImageFile] = useState(null);
+  /* ─── Image state ─── */
+  const [imageFile,    setImageFile]    = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  useEffect(() => { fetchProducts(); }, []);
 
   const fetchProducts = async () => {
-    const response = await axios.get(API_URL);
-    setProducts(response.data);
+    try {
+      const data = await getAllProducts();
+      setProducts(data);
+    } catch {
+      addToast("Failed to fetch products.", "error");
+    }
   };
 
   const handleImageChange = (e) => {
@@ -83,78 +85,48 @@ function Products() {
     }
   };
 
-  // ADD
-  const [newProduct, setNewProduct] = useState({
-    name: "", category: "", description: "", price: "", stock: "",
-  });
+  /* ─── Add ─── */
+  const blankProduct = { name: "", category: "", description: "", price: "", stock: "" };
+  const [newProduct, setNewProduct] = useState(blankProduct);
 
   const addProduct = async (e) => {
     e.preventDefault();
     try {
-      const nextId = products.length > 0
-        ? Math.max(...products.map((p) => parseInt(p.id))) + 1
-        : 1;
-
-      const formData = new FormData();
-      formData.append("id", nextId.toString());
-      formData.append("name", newProduct.name);
-      formData.append("category", newProduct.category);
-      formData.append("description", newProduct.description);
-      formData.append("price", newProduct.price);
-      formData.append("stock", newProduct.stock);
-      if (imageFile) formData.append("image", imageFile);
-
-      const response = await axios.post(API_URL, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      setProducts([...products, response.data]);
-      setNewProduct({ name: "", category: "", description: "", price: "", stock: "" });
+      const created = await createProduct(newProduct, imageFile);
+      setProducts((prev) => [...prev, created]);
+      setNewProduct(blankProduct);
       setImageFile(null);
       setImagePreview(null);
       handleAddClose();
-      addToast(`"${response.data.name}" added successfully.`, "success");
-    } catch {
-      addToast("Failed to add product. Please try again.", "error");
+      addToast(`"${created.name}" added successfully.`, "success");
+    } catch (err) {
+      addToast(err.message || "Failed to add product.", "error");
     }
   };
 
-  // EDIT
-  const [editingProduct, setEditingProduct] = useState({
-    name: "", category: "", description: "", price: "", stock: "",
-  });
+  /* ─── Edit ─── */
+  const [editingProduct, setEditingProduct] = useState(blankProduct);
 
-  const editProduct = async (e, id) => {
+  const editProduct = async (e) => {
     e.preventDefault();
     try {
-      const formData = new FormData();
-      formData.append("name", editingProduct.name);
-      formData.append("category", editingProduct.category);
-      formData.append("description", editingProduct.description);
-      formData.append("price", editingProduct.price);
-      formData.append("stock", editingProduct.stock);
-      if (imageFile) formData.append("image", imageFile);
-
-      const response = await axios.put(`${API_URL}/${id}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      setProducts(products.map((p) => (p.id === id ? response.data : p)));
-      setEditingProduct({ name: "", category: "", description: "", price: "", stock: "" });
+      const { id, image, ...fields } = editingProduct;
+      const updated = await updateProduct(selectedProduct.id, fields, imageFile);
+      setProducts((prev) => prev.map((p) => (p.id === selectedProduct.id ? updated : p)));
       setImageFile(null);
       setImagePreview(null);
       handleEditClose();
-      addToast(`"${response.data.name}" updated successfully.`, "success");
-    } catch {
-      addToast("Failed to update product. Please try again.", "error");
+      addToast(`"${updated.name}" updated successfully.`, "success");
+    } catch (err) {
+      addToast(err.message || "Failed to update product.", "error");
     }
   };
 
-  // DELETE
+  /* ─── Delete ─── */
   const deleteProduct = async () => {
     try {
-      await axios.delete(`${API_URL}/${selectedProduct.id}`);
-      setProducts(products.filter((p) => p.id !== selectedProduct.id));
+      await firebaseDeleteProduct(selectedProduct.id);
+      setProducts((prev) => prev.filter((p) => p.id !== selectedProduct.id));
       handleDeleteClose();
       addToast(`"${selectedProduct.name}" deleted.`, "success");
     } catch {
@@ -164,21 +136,34 @@ function Products() {
 
   /* ─── Shared styles ─── */
   const modalOverlay = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn";
-  const modalBox     = "bg-gray-900 rounded-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto animate-slideUp";
+  const modalBox     = "bg-gray-900 rounded-lg w-full mx-4 lg:w-1/2 lg:mx-auto max-h-[90vh] overflow-y-auto animate-slideUp";
   const inputCls     = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white";
+  const textareaCls  = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white resize-none";
 
+  /* ─── Reusable image upload ─── */
+  const ImageUpload = () => (
+    <div className="mb-4">
+      <label className="block text-sm text-gray-400 mb-2">Product Image</label>
+      <div className="flex flex-col items-center">
+        {imagePreview && (
+          <img src={imagePreview} alt="Preview" loading="lazy" decoding="async"
+            className="w-32 h-32 object-cover rounded mb-3" />
+        )}
+        <input type="file" accept="image/*" onChange={handleImageChange}
+          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+        />
+      </div>
+    </div>
+  );
+
+  /* ─── Table rows ─── */
   const productRows = products.map((product) => (
     <>
       <td className="text-center px-4 py-3">{product.id}</td>
       <td className="text-center px-4 py-3">
         {product.image ? (
-          <img
-            src={`http://localhost:5000${product.image}`}
-            alt={product.name}
-            loading="lazy"
-            decoding="async"
-            className="w-16 h-16 object-cover rounded mx-auto"
-          />
+          <img src={product.image} alt={product.name} loading="lazy" decoding="async"
+            className="w-16 h-16 object-cover rounded mx-auto" />
         ) : (
           <div className="w-16 h-16 bg-gray-700 rounded flex items-center justify-center mx-auto">
             <span className="text-gray-500 text-xs">No Image</span>
@@ -187,10 +172,18 @@ function Products() {
       </td>
       <td className="text-center px-4 py-3">{product.name}</td>
       <td className="text-center px-4 py-3">{product.category}</td>
-      <td className="text-center px-4 py-3">{product.description}</td>
+      <td className="text-center px-4 py-3 text-sm text-gray-300" title={product.description}>
+        {truncate(product.description)}
+      </td>
       <td className="text-center px-4 py-3">${product.price}</td>
       <td className="text-center px-4 py-3">{product.stock}</td>
       <td className="text-center px-4 py-3 whitespace-nowrap">
+        <button
+          className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded mr-2 transition-all duration-200 transform hover:scale-105"
+          onClick={(e) => { e.stopPropagation(); handleViewShow(product); }}
+        >
+          <i className="bi bi-eye mr-1" />View
+        </button>
         <button
           className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 text-sm px-3 py-1.5 rounded mr-2 transition-all duration-200 transform hover:scale-105"
           onClick={(e) => { e.stopPropagation(); handleEditShow(product); }}
@@ -206,30 +199,6 @@ function Products() {
       </td>
     </>
   ));
-
-  /* ─── Reusable image upload block ─── */
-  const ImageUpload = () => (
-    <div className="mb-4">
-      <label className="block text-sm text-gray-400 mb-2">Product Image</label>
-      <div className="flex flex-col items-center">
-        {imagePreview && (
-          <img
-            src={imagePreview}
-            alt="Preview"
-            loading="lazy"
-            decoding="async"
-            className="w-32 h-32 object-cover rounded mb-3"
-          />
-        )}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageChange}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-        />
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -255,11 +224,70 @@ function Products() {
         </div>
       </div>
 
+      {/* ─────────── VIEW MODAL ─────────── */}
+      {showViewModal && selectedProduct && (
+        <div className={modalOverlay} onClick={handleViewClose}>
+          <div className={modalBox} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b border-gray-700">
+              <h2 className="text-xl font-bold w-full text-center">PRODUCT DETAILS</h2>
+              <button onClick={handleViewClose} className="hover:opacity-70 text-2xl leading-none">&times;</button>
+            </div>
+            <div className="p-6">
+              {/* Product image */}
+              <div className="flex justify-center mb-6">
+                {selectedProduct.image ? (
+                  <img src={selectedProduct.image} alt={selectedProduct.name} loading="lazy" decoding="async"
+                    className="w-40 h-40 object-cover rounded-lg" />
+                ) : (
+                  <div className="w-40 h-40 bg-gray-700 rounded-lg flex items-center justify-center">
+                    <span className="text-gray-500 text-sm">No Image</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  { label: "ID",          value: selectedProduct.id },
+                  { label: "Name",        value: selectedProduct.name },
+                  { label: "Category",    value: selectedProduct.category },
+                  { label: "Price",       value: `$${selectedProduct.price}` },
+                  { label: "Stock",       value: selectedProduct.stock },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex justify-between items-start gap-4 py-2 border-b border-gray-800">
+                    <span className="text-gray-400 text-sm whitespace-nowrap">{label}</span>
+                    <span className="text-white text-sm text-right">{value}</span>
+                  </div>
+                ))}
+
+                {/* Description — full text */}
+                <div className="py-2 border-b border-gray-800">
+                  <span className="text-gray-400 text-sm block mb-2">Description</span>
+                  <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">
+                    {selectedProduct.description || <span className="text-gray-500 italic">N/A</span>}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-center mt-6 gap-3">
+                <button onClick={handleViewClose}
+                  className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded transition-all duration-200 transform hover:scale-105">
+                  Close
+                </button>
+                <button onClick={() => { handleViewClose(); handleEditShow(selectedProduct); }}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-6 py-2 rounded transition-all duration-200 transform hover:scale-105">
+                  <i className="bi bi-pencil mr-1" />Edit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─────────── ADD MODAL ─────────── */}
       {showAddModal && (
         <div className={modalOverlay} onClick={handleAddClose}>
           <div className={modalBox} onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-4">
+            <div className="flex justify-between items-center p-4 border-b border-gray-700">
               <h2 className="text-xl font-bold w-full text-center">ADD PRODUCT</h2>
               <button onClick={handleAddClose} className="hover:opacity-70 text-2xl leading-none transition-opacity duration-200">&times;</button>
             </div>
@@ -279,9 +307,9 @@ function Products() {
                   <label htmlFor="add_category" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Category</label>
                 </div>
                 <div className="mb-3 relative">
-                  <input type="text" id="add_description" placeholder=" " value={newProduct.description}
+                  <textarea id="add_description" placeholder=" " rows={10} value={newProduct.description}
                     onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                    required className={inputCls} />
+                    required className={textareaCls} />
                   <label htmlFor="add_description" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Description</label>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -318,12 +346,12 @@ function Products() {
       {showEditModal && (
         <div className={modalOverlay} onClick={handleEditClose}>
           <div className={modalBox} onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-4">
+            <div className="flex justify-between items-center p-4 border-b border-gray-700">
               <h2 className="text-xl font-bold w-full text-center">EDIT PRODUCT</h2>
               <button onClick={handleEditClose} className="hover:opacity-70 text-2xl leading-none transition-opacity duration-200">&times;</button>
             </div>
             <div className="p-4">
-              <form onSubmit={(e) => editProduct(e, selectedProduct.id)}>
+              <form onSubmit={editProduct}>
                 <ImageUpload />
                 <div className="mb-3 relative">
                   <input type="text" id="edit_name" placeholder=" " value={editingProduct.name}
@@ -338,9 +366,9 @@ function Products() {
                   <label htmlFor="edit_category" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Category</label>
                 </div>
                 <div className="mb-3 relative">
-                  <input type="text" id="edit_description" placeholder=" " value={editingProduct.description}
+                  <textarea id="edit_description" placeholder=" " rows={10} value={editingProduct.description}
                     onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                    required className={inputCls} />
+                    required className={textareaCls} />
                   <label htmlFor="edit_description" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Description</label>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -376,8 +404,8 @@ function Products() {
       {/* ─────────── DELETE MODAL ─────────── */}
       {showDeleteModal && (
         <div className={modalOverlay} onClick={handleDeleteClose}>
-          <div className="bg-gray-900 rounded-lg max-w-md w-full mx-4 animate-slideUp" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-4">
+          <div className="bg-gray-900 rounded-lg w-full mx-4 lg:w-1/2 lg:mx-auto animate-slideUp" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b border-gray-700">
               <h2 className="text-xl font-bold w-full text-center">DELETE?</h2>
               <button onClick={handleDeleteClose} className="hover:opacity-70 text-2xl leading-none transition-opacity duration-200">&times;</button>
             </div>

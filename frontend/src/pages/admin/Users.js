@@ -1,18 +1,21 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
 import Switch from "../../components/Switch";
+import {
+  getAllUsers,
+  createUser,
+  updateUser,
+  deleteUser as firebaseDeleteUser,
+} from "../../firebase/services/users";
 import "../../styles/StyleSheet.css";
-
-const API_URL = "http://localhost:5000/api/users";
 
 /* ─── Avatar ─── */
 const Avatar = ({ src, name, size = "w-10 h-10" }) => (
   src ? (
     <img
-      src={`http://localhost:5000${src}`}
+      src={src}
       alt={name}
       loading="lazy"
       decoding="async"
@@ -27,7 +30,7 @@ const Avatar = ({ src, name, size = "w-10 h-10" }) => (
 
 /* ─── Reusable field ─── */
 const Field = ({ id, label, type = "text", value, onChange, required = false, disabled = false, placeholder = " " }) => {
-  const inputCls  = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white";
+  const inputCls    = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white";
   const disabledCls = "w-full px-3 pt-5 pb-2 bg-gray-800/50 border border-gray-700/50 rounded text-gray-500 cursor-not-allowed";
   return (
     <div className="mb-3 relative">
@@ -77,13 +80,12 @@ function Users() {
   const [showViewModal,   setShowViewModal]   = useState(false);
   const [selectedUser,    setSelectedUser]    = useState(null);
 
-  const handleAddClose    = () => { setShowAddModal(false);    resetImage(); };
+  const handleAddClose    = () => { setShowAddModal(false);  resetImage(); };
   const handleAddShow     = () =>   setShowAddModal(true);
-  const handleEditClose   = () => { setShowEditModal(false);   resetImage(); };
+  const handleEditClose   = () => { setShowEditModal(false); resetImage(); };
   const handleEditShow    = (user) => {
     setSelectedUser(user);
     setEditingUser({
-      email:       user.email       || "",
       firstName:   user.firstName   || "",
       middleName:  user.middleName  || "",
       lastName:    user.lastName    || "",
@@ -91,7 +93,7 @@ function Users() {
       address:     user.address     || "",
       role:        user.role        || "user",
     });
-    setImagePreview(user.profilePicture ? `http://localhost:5000${user.profilePicture}` : null);
+    setImagePreview(user.profilePicture || null);
     setShowEditModal(true);
   };
   const handleDeleteClose = () => setShowDeleteModal(false);
@@ -121,11 +123,11 @@ function Users() {
   const blankNew = { username: "", password: "", email: "", firstName: "", middleName: "", lastName: "", phoneNumber: "", address: "", role: "user" };
   const [newUser, setNewUser] = useState(blankNew);
 
-  /* ─── Edit state (no username/password) ─── */
-  const blankEdit = { email: "", firstName: "", middleName: "", lastName: "", phoneNumber: "", address: "", role: "user" };
+  /* ─── Edit state — no username, password, or email ─── */
+  const blankEdit = { firstName: "", middleName: "", lastName: "", phoneNumber: "", address: "", role: "user" };
   const [editingUser, setEditingUser] = useState(blankEdit);
 
-  /* ─── Header action — re-set when showFull changes ─── */
+  /* ─── Header action ─── */
   useEffect(() => {
     setPageTitle("Users");
     setHeaderAction(
@@ -150,9 +152,12 @@ function Users() {
   useEffect(() => { fetchUsers(); }, [activeRole]);
 
   const fetchUsers = async () => {
-    const res = await axios.get(API_URL);
-    const all = res.data;
-    setUsers(activeRole === "all" ? all : all.filter((u) => u.role === activeRole));
+    try {
+      const all = await getAllUsers();
+      setUsers(activeRole === "all" ? all : all.filter((u) => u.role === activeRole));
+    } catch {
+      addToast("Failed to fetch users.", "error");
+    }
   };
 
   /* ─── Helpers ─── */
@@ -160,9 +165,9 @@ function Users() {
     const parts = [u.firstName, u.middleName, u.lastName].filter(Boolean);
     return parts.length ? parts.join(" ") : <span className="text-gray-500 italic">N/A</span>;
   };
-  const cartCount = (u) => u.cart?.length ?? 0;
+  const cartCount  = (u) => u.cart?.length ?? 0;
   const formatDate = (d) => d ? new Date(d).toLocaleDateString() : <span className="text-gray-500 italic">N/A</span>;
-  const roleBadge = (r) => (
+  const roleBadge  = (r) => (
     <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold text-white ${r === "admin" ? "bg-purple-600" : "bg-blue-600"}`}>
       {r}
     </span>
@@ -172,18 +177,14 @@ function Users() {
   const addUser = async (e) => {
     e.preventDefault();
     try {
-      const formData = new FormData();
-      Object.entries(newUser).forEach(([k, v]) => formData.append(k, v));
-      if (imageFile) formData.append("profilePicture", imageFile);
-
-      const res = await axios.post(API_URL, formData, { headers: { "Content-Type": "multipart/form-data" } });
-      setUsers((prev) => [...prev, res.data]);
+      const created = await createUser(newUser, imageFile);
+      setUsers((prev) => [...prev, created]);
       setNewUser(blankNew);
       resetImage();
       handleAddClose();
-      addToast(`User "${res.data.username}" added.`, "success");
+      addToast(`User "${created.username}" added.`, "success");
     } catch (err) {
-      addToast(err.response?.data?.message || "Failed to add user.", "error");
+      addToast(err.message || "Failed to add user.", "error");
     }
   };
 
@@ -191,25 +192,23 @@ function Users() {
   const editUser = async (e) => {
     e.preventDefault();
     try {
-      const formData = new FormData();
-      Object.entries(editingUser).forEach(([k, v]) => formData.append(k, v));
-      if (imageFile) formData.append("profilePicture", imageFile);
-
-      const res = await axios.put(`${API_URL}/${selectedUser.id}`, formData, { headers: { "Content-Type": "multipart/form-data" } });
-      setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? res.data : u)));
+      const updated = await updateUser(selectedUser.id, editingUser, imageFile);
+      setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? updated : u)));
       resetImage();
       handleEditClose();
-      addToast(`User "${res.data.username}" updated.`, "success");
+      addToast(`User "${updated.username}" updated.`, "success");
     } catch (err) {
-      addToast(err.response?.data?.message || "Failed to update user.", "error");
+      addToast(err.message || "Failed to update user.", "error");
     }
   };
 
   /* ─── DELETE ─── */
   const deleteUser = async () => {
     try {
-      await axios.delete(`${API_URL}/${selectedUser.id}`);
-      setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
+      await firebaseDeleteUser(selectedUser.id);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === selectedUser.id ? { ...u, status: "deleted" } : u))
+      );
       handleDeleteClose();
       addToast(`User "${selectedUser.username}" deleted.`, "success");
     } catch {
@@ -220,7 +219,6 @@ function Users() {
   /* ─── Shared styles ─── */
   const modalOverlay = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn";
   const modalBox     = "bg-gray-900 rounded-lg w-full mx-4 max-h-[90vh] overflow-y-auto animate-slideUp";
-  const inputCls     = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white";
   const disabledCls  = "w-full px-3 pt-5 pb-2 bg-gray-800/50 border border-gray-700/50 rounded text-gray-500 cursor-not-allowed";
   const selectCls    = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white";
 
@@ -236,14 +234,13 @@ function Users() {
       <td className="text-center px-3 py-3 text-sm">{user.email || <span className="text-gray-500 italic">N/A</span>}</td>
       {showFull && <>
         <td className="text-center px-3 py-3 text-sm">{user.phoneNumber || <span className="text-gray-500 italic">N/A</span>}</td>
-        <td className="text-center px-3 py-3 text-sm">{user.address || <span className="text-gray-500 italic">N/A</span>}</td>
+        <td className="text-center px-3 py-3 text-sm">{user.address    || <span className="text-gray-500 italic">N/A</span>}</td>
         <td className="text-center px-3 py-3 text-sm">{formatDate(user.createdAt)}</td>
       </>}
       <td className="text-center px-3 py-3">{roleBadge(user.role)}</td>
       <td className="text-center px-3 py-3">
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${cartCount(user) > 0 ? "bg-orange-600 text-white" : "bg-gray-700 text-gray-400"}`}>
-          <i className="bi bi-cart2" />
-          {cartCount(user)}
+          <i className="bi bi-cart2" /> {cartCount(user)}
         </span>
       </td>
       <td className="text-center px-3 py-3 whitespace-nowrap">
@@ -254,14 +251,16 @@ function Users() {
           <i className="bi bi-eye mr-1" />View
         </button>
         <button
-          className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 text-sm px-3 py-1.5 rounded mr-1 transition-all duration-200 transform hover:scale-105"
+          className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 text-sm px-3 py-1.5 rounded mr-1 transition-all duration-200 transform hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
           onClick={(e) => { e.stopPropagation(); handleEditShow(user); }}
+          disabled={user.status === "deleted"}
         >
           <i className="bi bi-pencil mr-1" />Edit
         </button>
         <button
-          className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded transition-all duration-200 transform hover:scale-105"
+          className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded transition-all duration-200 transform hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
           onClick={(e) => { e.stopPropagation(); handleDeleteShow(user); }}
+          disabled={user.status === "deleted"}
         >
           <i className="bi bi-trash mr-1" />Delete
         </button>
@@ -308,21 +307,26 @@ function Users() {
               <button onClick={handleViewClose} className="hover:opacity-70 text-2xl leading-none">&times;</button>
             </div>
             <div className="p-6">
-              {/* Avatar + username */}
               <div className="flex flex-col items-center mb-6">
                 <Avatar src={selectedUser.profilePicture} name={selectedUser.username} size="w-24 h-24" />
                 <p className="text-white font-bold text-lg mt-3">{selectedUser.username}</p>
-                {roleBadge(selectedUser.role)}
+                <div className="flex items-center gap-2 mt-1">
+                  {roleBadge(selectedUser.role)}
+                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${selectedUser.status === "deleted" ? "bg-red-900 text-red-300" : "bg-green-900 text-green-300"}`}>
+                    {selectedUser.status || "active"}
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-3">
                 {[
-                  { label: "ID",          value: `#${selectedUser.id}` },
-                  { label: "Full Name",   value: getFullName(selectedUser) },
-                  { label: "Email",       value: selectedUser.email       || <span className="text-gray-500 italic">N/A</span> },
-                  { label: "Phone",       value: selectedUser.phoneNumber || <span className="text-gray-500 italic">N/A</span> },
-                  { label: "Address",     value: selectedUser.address     || <span className="text-gray-500 italic">N/A</span> },
-                  { label: "Joined",      value: formatDate(selectedUser.createdAt) },
+                  { label: "ID",         value: `#${selectedUser.id}` },
+                  { label: "Full Name",  value: getFullName(selectedUser) },
+                  { label: "Email",      value: selectedUser.email       || <span className="text-gray-500 italic">N/A</span> },
+                  { label: "Phone",      value: selectedUser.phoneNumber || <span className="text-gray-500 italic">N/A</span> },
+                  { label: "Address",    value: selectedUser.address     || <span className="text-gray-500 italic">N/A</span> },
+                  { label: "Joined",     value: formatDate(selectedUser.createdAt) },
+                  { label: "Deleted At", value: selectedUser.deletedAt ? formatDate(selectedUser.deletedAt) : <span className="text-gray-500 italic">N/A</span> },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex justify-between items-start gap-4 py-2 border-b border-gray-800">
                     <span className="text-gray-400 text-sm whitespace-nowrap">{label}</span>
@@ -375,26 +379,25 @@ function Users() {
                 <ImageUpload imagePreview={imagePreview} onImageChange={handleImageChange} />
 
                 <div className="grid grid-cols-2 gap-3">
-                  <Field id="add_username"  label="Username *" value={newUser.username}
+                  <Field id="add_username"   label="Username *"  value={newUser.username}
                     onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} required />
-                  <Field id="add_password"  label="Password *" type="password" value={newUser.password}
+                  <Field id="add_password"   label="Password *"  type="password" value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} required />
-                  <Field id="add_firstName" label="First Name"  value={newUser.firstName}
+                  <Field id="add_email"      label="Email *"     type="email" value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} required />
+                  <Field id="add_firstName"  label="First Name"  value={newUser.firstName}
                     onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })} />
                   <Field id="add_middleName" label="Middle Name" value={newUser.middleName}
                     onChange={(e) => setNewUser({ ...newUser, middleName: e.target.value })} />
-                  <Field id="add_lastName"  label="Last Name"   value={newUser.lastName}
+                  <Field id="add_lastName"   label="Last Name"   value={newUser.lastName}
                     onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })} />
-                  <Field id="add_email"     label="Email"       type="email" value={newUser.email}
-                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
-                  <Field id="add_phone"     label="Phone"       type="tel" value={newUser.phoneNumber}
+                  <Field id="add_phone"      label="Phone"       type="tel" value={newUser.phoneNumber}
                     onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })} />
                 </div>
 
                 <Field id="add_address" label="Address" value={newUser.address}
                   onChange={(e) => setNewUser({ ...newUser, address: e.target.value })} />
 
-                {/* Role */}
                 <div className="mb-3 relative">
                   <select id="add_role" value={newUser.role}
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
@@ -433,11 +436,15 @@ function Users() {
               <form onSubmit={editUser}>
                 <ImageUpload imagePreview={imagePreview} onImageChange={handleImageChange} />
 
-                {/* Read-only: username & password */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                {/* Locked fields — username, email, password */}
+                <div className="grid grid-cols-3 gap-3 mb-3">
                   <div className="relative">
                     <input value={selectedUser.username} disabled className={disabledCls} />
                     <label className="absolute left-3 top-1 text-xs pointer-events-none text-gray-500">Username (locked)</label>
+                  </div>
+                  <div className="relative">
+                    <input value={selectedUser.email || ""} disabled className={disabledCls} />
+                    <label className="absolute left-3 top-1 text-xs pointer-events-none text-gray-500">Email (locked)</label>
                   </div>
                   <div className="relative">
                     <input value="••••••••" disabled className={disabledCls} />
@@ -452,8 +459,6 @@ function Users() {
                     onChange={(e) => setEditingUser({ ...editingUser, middleName: e.target.value })} />
                   <Field id="edit_lastName"   label="Last Name"   value={editingUser.lastName}
                     onChange={(e) => setEditingUser({ ...editingUser, lastName: e.target.value })} />
-                  <Field id="edit_email"      label="Email"       type="email" value={editingUser.email}
-                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })} />
                   <Field id="edit_phone"      label="Phone"       type="tel" value={editingUser.phoneNumber}
                     onChange={(e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value })} />
                 </div>
@@ -461,7 +466,6 @@ function Users() {
                 <Field id="edit_address" label="Address" value={editingUser.address}
                   onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })} />
 
-                {/* Role */}
                 <div className="mb-3 relative">
                   <select id="edit_role" value={editingUser.role}
                     onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
@@ -501,12 +505,12 @@ function Users() {
               <p className="mb-1 px-2 text-white">
                 Are you sure you want to delete <span className="font-bold">"{selectedUser.username}"</span>?
               </p>
-              <p className="text-gray-400 text-sm">This action cannot be undone.</p>
+              <p className="text-gray-400 text-sm">The account will be deactivated and can no longer sign in.</p>
             </div>
             <div className="p-4 flex justify-center gap-3">
               <button onClick={handleDeleteClose}
                 className="bg-gray-500 hover:bg-gray-600 text-white px-5 py-2 rounded transition-all duration-200 transform hover:scale-105">
-                Close
+                Cancel
               </button>
               <button onClick={deleteUser}
                 className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded transition-all duration-200 transform hover:scale-105">

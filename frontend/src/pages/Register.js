@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { isUsernameTaken, createUser } from "../firebase/services/users";
 import { useToast } from "../context/ToastContext";
 import { ReactComponent as Logo } from "../assets/logo.svg";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -38,16 +38,16 @@ const Register = () => {
   const handleCheckUsername = async (e) => {
     e.preventDefault();
     setUsernameError("");
+
     if (!username.trim()) {
       setUsernameError("Please enter a username.");
       return;
     }
     setIsCheckingUsername(true);
+
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/users/check/username/${username.trim()}`
-      );
-      if (res.data.exists) {
+      const taken = await isUsernameTaken(username.trim());
+      if (taken) {
         setUsernameError("That username is already taken. Please choose another.");
       } else {
         setStep(2);
@@ -66,17 +66,20 @@ const Register = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     setFormError("");
+
     if (formData.password !== formData.confirmPassword) {
       setFormError("Passwords do not match.");
       return;
     }
+
     if (formData.password.length < 6) {
       setFormError("Password must be at least 6 characters.");
       return;
     }
     setIsSubmitting(true);
+    
     try {
-      await axios.post("http://localhost:5000/api/users", {
+      await createUser({
         username: username.trim(),
         email: formData.email,
         password: formData.password,
@@ -90,7 +93,7 @@ const Register = () => {
       addToast("User registered successfully.");
       navigate("/");
     } catch (err) {
-      setFormError(err.response?.data?.message || "Registration failed. Please try again.");
+      setFormError(err.message || "Registration failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

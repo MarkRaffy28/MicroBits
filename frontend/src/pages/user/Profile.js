@@ -1,8 +1,13 @@
-import axios from "axios";
 import React, { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 import { useToast } from "../../context/ToastContext";
-
-const BASE = "http://localhost:5000/api";
+import { useAuth } from "../../context/AuthContext";
+import { auth } from "../../firebase/config";
+import { getUserById, updateUser, deleteUser, isUsernameTaken } from "../../firebase/services/users";
+import { getOrdersByUser } from "../../firebase/services/orders";
+import { getAllProducts } from "../../firebase/services/products";
+import { logout } from "../../firebase/services/auth";
 
 /* ─── Field with floating label ─── */
 const Field = ({
@@ -21,16 +26,11 @@ const Field = ({
         ${disabled ? "opacity-50 cursor-not-allowed border-gray-700" : "border-gray-600"}
         ${error ? "border-red-500 focus:ring-red-500" : ""}`}
     />
-    <label
-      htmlFor={id}
-      className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400"
-    >
+    <label htmlFor={id} className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">
       {label}
     </label>
     {suffix && (
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-        {suffix}
-      </span>
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{suffix}</span>
     )}
     {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
     {hint && !error && <p className="text-gray-500 text-xs mt-1">{hint}</p>}
@@ -52,15 +52,16 @@ const Card = ({ title, icon, children, action }) => (
 );
 
 function Profile() {
-  const { addToast } = useToast();
-  const stored = JSON.parse(localStorage.getItem("user") || "{}");
-  const userId = stored.id;
+  const { addToast }    = useToast();
+  const { currentUser } = useAuth();
+  const navigate        = useNavigate();
+  const userId          = currentUser?.id;
 
   /* ─── Data ─── */
-  const [user,     setUser]     = useState(null);
-  const [orders,   setOrders]   = useState([]);
-  const [products, setProducts] = useState([]);
-  const [loading,  setLoading]  = useState(true);
+  const [user,           setUser]           = useState(null);
+  const [orders,         setOrders]         = useState([]);
+  const [products,       setProducts]       = useState([]);
+  const [loading,        setLoading]        = useState(true);
   const [profileDeleted, setProfileDeleted] = useState(false);
 
   /* ─── Edit sections open/close ─── */
@@ -70,15 +71,15 @@ function Profile() {
   /* ─── Form states ─── */
   const [infoForm, setInfoForm] = useState({
     firstName: "", middleName: "", lastName: "",
-    email: "", phoneNumber: "", address: "",
+    phoneNumber: "", address: "",
   });
 
-  const [usernameForm, setUsernameForm] = useState({ username: "" });
+  const [usernameForm,   setUsernameForm]   = useState({ username: "" });
   const [usernameStatus, setUsernameStatus] = useState(null); // null | "checking" | "available" | "taken" | "same"
   const usernameDebounce = useRef(null);
 
-  const [passwordForm, setPasswordForm] = useState({ current: "", newPass: "", confirm: "" });
-  const [showPasswords, setShowPasswords] = useState({ current: false, newPass: false, confirm: false });
+  const [passwordForm,   setPasswordForm]   = useState({ current: "", newPass: "", confirm: "" });
+  const [showPasswords,  setShowPasswords]  = useState({ current: false, newPass: false, confirm: false });
   const [passwordErrors, setPasswordErrors] = useState({});
 
   /* ─── Image ─── */
@@ -87,38 +88,34 @@ function Profile() {
 
   /* ─── Fetch ─── */
   useEffect(() => {
-    if (profileDeleted) return;
+    if (profileDeleted || !userId) return;
 
     const load = async () => {
       try {
-        const [uRes, oRes, pRes] = await Promise.all([
-          axios.get(`${BASE}/users/${userId}`),
-          axios.get(`${BASE}/orders/user/${userId}`),
-          axios.get(`${BASE}/products`),
+        const [u, userOrders, allProducts] = await Promise.all([
+          getUserById(userId),
+          getOrdersByUser(userId),
+          getAllProducts(),
         ]);
-        const u = uRes.data;
         setUser(u);
-        setOrders(oRes.data);
-        setProducts(pRes.data);
+        setOrders(userOrders);
+        setProducts(allProducts);
         setInfoForm({
           firstName:   u.firstName   || "",
           middleName:  u.middleName  || "",
           lastName:    u.lastName    || "",
-          email:       u.email       || "",
           phoneNumber: u.phoneNumber || "",
           address:     u.address     || "",
         });
         setUsernameForm({ username: u.username });
-      } catch (error) {
-        if (!profileDeleted) {
-          addToast("Failed to load profile.", "error");
-        }
+      } catch {
+        if (!profileDeleted) addToast("Failed to load profile.", "error");
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [userId, profileDeleted, addToast]);
+  }, [userId, profileDeleted]);
 
   /* ─── Username availability check (debounced) ─── */
   const handleUsernameChange = (val) => {
@@ -131,34 +128,20 @@ function Profile() {
     clearTimeout(usernameDebounce.current);
     usernameDebounce.current = setTimeout(async () => {
       try {
-        const res = await axios.get(`${BASE}/users/check/username/${val.trim()}`);
-        setUsernameStatus(res.data.exists ? "taken" : "available");
+        const taken = await isUsernameTaken(val.trim());
+        setUsernameStatus(taken ? "taken" : "available");
       } catch {
         setUsernameStatus(null);
       }
     }, 500);
   };
 
-  /* ─── Helpers ─── */
-  const buildFormData = (fields, file, fileKey = "profilePicture") => {
-    const fd = new FormData();
-    Object.entries(fields).forEach(([k, v]) => fd.append(k, v));
-    if (file) fd.append(fileKey, file);
-    return fd;
-  };
-
-  const updateLocalStorage = (updated) => {
-    const decoded = JSON.parse(localStorage.getItem("user") || "{}");
-    localStorage.setItem("user", JSON.stringify({ ...decoded, ...updated }));
-  };
-
   /* ─── Save personal info ─── */
   const saveInfo = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.put(`${BASE}/users/${userId}`,
-        buildFormData(infoForm, null), { headers: { "Content-Type": "multipart/form-data" } });
-      setUser(res.data);
+      const updated = await updateUser(userId, infoForm);
+      setUser(updated);
       addToast("Profile info updated.", "success");
       setEditSection(null);
     } catch {
@@ -172,11 +155,8 @@ function Profile() {
     if (usernameStatus === "taken") return;
     if (usernameStatus === "same") { setEditSection(null); return; }
     try {
-      const res = await axios.put(`${BASE}/users/${userId}`,
-        buildFormData({ username: usernameForm.username.trim() }, null),
-        { headers: { "Content-Type": "multipart/form-data" } });
-      setUser(res.data);
-      updateLocalStorage({ username: res.data.username });
+      const updated = await updateUser(userId, { username: usernameForm.username.trim() });
+      setUser(updated);
       addToast("Username updated.", "success");
       setEditSection(null);
     } catch {
@@ -184,27 +164,32 @@ function Profile() {
     }
   };
 
-  /* ─── Save password ─── */
+  /* ─── Save password (Firebase reauthentication required) ─── */
   const savePassword = async (e) => {
     e.preventDefault();
     const errs = {};
-    if (!passwordForm.current) errs.current = "Required.";
-    if (passwordForm.current !== user?.password) errs.current = "Current password is incorrect.";
+    if (!passwordForm.current)                              errs.current = "Required.";
     if (!passwordForm.newPass || passwordForm.newPass.length < 6) errs.newPass = "Min 6 characters.";
-    if (passwordForm.newPass !== passwordForm.confirm) errs.confirm = "Passwords do not match.";
+    if (passwordForm.newPass !== passwordForm.confirm)      errs.confirm = "Passwords do not match.";
     setPasswordErrors(errs);
     if (Object.keys(errs).length) return;
 
     try {
-      await axios.put(`${BASE}/users/${userId}`,
-        buildFormData({ password: passwordForm.newPass }, null),
-        { headers: { "Content-Type": "multipart/form-data" } });
+      // Reauthenticate with the current password before changing it
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, passwordForm.current);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, passwordForm.newPass);
+
       setPasswordForm({ current: "", newPass: "", confirm: "" });
       setPasswordErrors({});
       addToast("Password changed successfully.", "success");
       setEditSection(null);
-    } catch {
-      addToast("Failed to change password.", "error");
+    } catch (err) {
+      if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        setPasswordErrors({ current: "Current password is incorrect." });
+      } else {
+        addToast("Failed to change password.", "error");
+      }
     }
   };
 
@@ -213,9 +198,8 @@ function Profile() {
     e.preventDefault();
     if (!imageFile) return;
     try {
-      const res = await axios.put(`${BASE}/users/${userId}`,
-        buildFormData({}, imageFile), { headers: { "Content-Type": "multipart/form-data" } });
-      setUser(res.data);
+      const updated = await updateUser(userId, {}, imageFile);
+      setUser(updated);
       setImageFile(null);
       setImagePreview(null);
       addToast("Profile picture updated.", "success");
@@ -226,49 +210,41 @@ function Profile() {
   };
 
   /* ─── Stats ─── */
-  const totalSpent     = orders.filter((o) => o.status === "completed").reduce((s, o) => s + o.totalAmount, 0);
-  const pendingOrders  = orders.filter((o) => o.status === "pending").length;
+  const totalSpent      = orders.filter((o) => o.status === "completed").reduce((s, o) => s + o.totalAmount, 0);
+  const pendingOrders   = orders.filter((o) => o.status === "pending").length;
   const completedOrders = orders.filter((o) => o.status === "completed").length;
-  const cartItems      = user?.cart?.reduce((s, i) => s + i.quantity, 0) ?? 0;
+  const cartItems       = user?.cart?.reduce((s, i) => s + i.quantity, 0) ?? 0;
 
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "N/A";
-
+  const formatDate  = (d) => d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "N/A";
   const getFullName = (u) => {
     if (!u) return "";
     const parts = [u.firstName, u.middleName, u.lastName].filter(Boolean);
     return parts.join(" ") || u.username;
   };
-
   const toggleEye = (key) => setShowPasswords((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
-        <svg className="animate-spin h-8 w-8 mr-3 text-blue-500" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        Loading profile…
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center h-64 text-gray-400">
+      <svg className="animate-spin h-8 w-8 mr-3 text-blue-500" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      Loading profile…
+    </div>
+  );
 
-  if (profileDeleted) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-        <svg className="animate-spin h-8 w-8 mb-3 text-green-500" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        <p className="text-green-400 font-medium">Account deleted successfully</p>
-        <p className="text-gray-500 text-sm mt-1">Redirecting to home...</p>
-      </div>
-    );
-  }
+  if (profileDeleted) return (
+    <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+      <svg className="animate-spin h-8 w-8 mb-3 text-green-500" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <p className="text-green-400 font-medium">Account deleted successfully</p>
+      <p className="text-gray-500 text-sm mt-1">Redirecting to home...</p>
+    </div>
+  );
 
   if (!user) return <p className="p-6 text-red-400">User not found.</p>;
-
-  const avatarSrc = user.profilePicture ? `http://localhost:5000${user.profilePicture}` : null;
 
   return (
     <>
@@ -278,20 +254,18 @@ function Profile() {
         <div className="bg-gray-800 rounded-xl border border-gray-700/50 p-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
 
-            {/* Avatar */}
+            {/* Avatar — profilePicture is now base64, used directly as src */}
             <div className="relative flex-shrink-0">
-              {avatarSrc ? (
-                <img src={avatarSrc} alt={user.username}
+              {user.profilePicture ? (
+                <img src={user.profilePicture} alt={user.username}
                   className="w-24 h-24 rounded-full object-cover border-4 border-gray-700" />
               ) : (
                 <div className="w-24 h-24 rounded-full bg-gray-700 border-4 border-gray-600 flex items-center justify-center">
                   <i className="bi bi-person text-4xl text-gray-400" />
                 </div>
               )}
-              <button
-                onClick={() => toggleSection("avatar")}
-                className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow transition-colors"
-              >
+              <button onClick={() => toggleSection("avatar")}
+                className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow transition-colors">
                 <i className="bi bi-camera-fill text-white text-xs" />
               </button>
             </div>
@@ -321,10 +295,10 @@ function Profile() {
             <form onSubmit={saveAvatar} className="mt-5 pt-5 border-t border-gray-700">
               <div className="flex flex-col items-center gap-3">
                 {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="w-24 h-24 rounded-full object-cover border-4 border-blue-500/50" />
+                  <img src={imagePreview} alt="Preview"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-blue-500/50" />
                 )}
-                <input
-                  type="file" accept="image/*"
+                <input type="file" accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
@@ -339,7 +313,8 @@ function Profile() {
                 />
               </div>
               <div className="flex justify-end gap-2 mt-4">
-                <button type="button" onClick={() => { setEditSection(null); setImageFile(null); setImagePreview(null); }}
+                <button type="button"
+                  onClick={() => { setEditSection(null); setImageFile(null); setImagePreview(null); }}
                   className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors">
                   Cancel
                 </button>
@@ -355,10 +330,10 @@ function Profile() {
         {/* ─── Stats strip ─── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Total Orders",  value: orders.length,   icon: "bi-receipt",          color: "text-blue-400" },
-            { label: "Completed",     value: completedOrders, icon: "bi-check-circle-fill", color: "text-green-400" },
-            { label: "Pending",       value: pendingOrders,   icon: "bi-hourglass-split",   color: "text-yellow-400" },
-            { label: "Total Spent",   value: `$${totalSpent.toFixed(2)}`, icon: "bi-currency-dollar", color: "text-purple-400" },
+            { label: "Total Orders",  value: orders.length,                      icon: "bi-receipt",           color: "text-blue-400"   },
+            { label: "Completed",     value: completedOrders,                    icon: "bi-check-circle-fill", color: "text-green-400"  },
+            { label: "Pending",       value: pendingOrders,                      icon: "bi-hourglass-split",   color: "text-yellow-400" },
+            { label: "Total Spent",   value: `$${totalSpent.toFixed(2)}`,        icon: "bi-currency-dollar",   color: "text-purple-400" },
           ].map(({ label, value, icon, color }) => (
             <div key={label} className="bg-gray-800 rounded-xl border border-gray-700/50 p-4 text-center">
               <i className={`bi ${icon} text-xl ${color} mb-1 block`} />
@@ -369,9 +344,7 @@ function Profile() {
         </div>
 
         {/* ─── Username ─── */}
-        <Card
-          title="Username"
-          icon="bi-at"
+        <Card title="Username" icon="bi-at"
           action={
             <button onClick={() => toggleSection("username")}
               className={`text-xs px-3 py-1 rounded transition-colors ${editSection === "username"
@@ -394,18 +367,15 @@ function Profile() {
           ) : (
             <form onSubmit={saveUsername} className="space-y-3">
               <div className="relative">
-                <Field
-                  id="new_username"
-                  label="New Username"
+                <Field id="new_username" label="New Username"
                   value={usernameForm.username}
                   onChange={(e) => handleUsernameChange(e.target.value)}
                   required
                   hint="Must be unique. Alphanumeric recommended."
                   error={usernameStatus === "taken" ? "Username is already taken." : undefined}
                 />
-                {/* Status indicator */}
                 <div className="absolute right-3 top-4">
-                  {usernameStatus === "checking" && (
+                  {usernameStatus === "checking"  && (
                     <svg className="animate-spin h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -422,7 +392,8 @@ function Profile() {
                 </p>
               )}
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => { setEditSection(null); setUsernameForm({ username: user.username }); setUsernameStatus(null); }}
+                <button type="button"
+                  onClick={() => { setEditSection(null); setUsernameForm({ username: user.username }); setUsernameStatus(null); }}
                   className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors">
                   Cancel
                 </button>
@@ -437,9 +408,7 @@ function Profile() {
         </Card>
 
         {/* ─── Password ─── */}
-        <Card
-          title="Password"
-          icon="bi-lock-fill"
+        <Card title="Password" icon="bi-lock-fill"
           action={
             <button onClick={() => { toggleSection("password"); setPasswordErrors({}); setPasswordForm({ current: "", newPass: "", confirm: "" }); }}
               className={`text-xs px-3 py-1 rounded transition-colors ${editSection === "password"
@@ -461,45 +430,34 @@ function Profile() {
             </div>
           ) : (
             <form onSubmit={savePassword} className="space-y-3">
-              {/* Current password */}
-              <div className="relative">
-                <Field
-                  id="current_pass" label="Current Password"
-                  type={showPasswords.current ? "text" : "password"}
-                  value={passwordForm.current}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
-                  error={passwordErrors.current}
-                />
-                <button type="button" onClick={() => toggleEye("current")}
-                  className="absolute right-3 top-4 text-gray-400 hover:text-gray-300 transition-colors">
-                  <i className={`bi ${showPasswords.current ? "bi-eye" : "bi-eye-slash"} text-sm`} />
-                </button>
-              </div>
-
-              {/* New password */}
-              <div className="relative">
-                <Field
-                  id="new_pass" label="New Password"
-                  type={showPasswords.newPass ? "text" : "password"}
-                  value={passwordForm.newPass}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, newPass: e.target.value })}
-                  error={passwordErrors.newPass}
-                  hint="Minimum 6 characters."
-                />
-                <button type="button" onClick={() => toggleEye("newPass")}
-                  className="absolute right-3 top-4 text-gray-400 hover:text-gray-300 transition-colors">
-                  <i className={`bi ${showPasswords.newPass ? "bi-eye" : "bi-eye-slash"} text-sm`} />
-                </button>
-              </div>
+              {[
+                { id: "current_pass", label: "Current Password", key: "current" },
+                { id: "new_pass",     label: "New Password",     key: "newPass", hint: "Minimum 6 characters." },
+                { id: "confirm_pass", label: "Confirm New Password", key: "confirm" },
+              ].map(({ id, label, key, hint }) => (
+                <div key={id} className="relative">
+                  <Field id={id} label={label}
+                    type={showPasswords[key] ? "text" : "password"}
+                    value={passwordForm[key]}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, [key]: e.target.value })}
+                    error={passwordErrors[key]}
+                    hint={hint}
+                  />
+                  <button type="button" onClick={() => toggleEye(key)}
+                    className="absolute right-3 top-4 text-gray-400 hover:text-gray-300 transition-colors">
+                    <i className={`bi ${showPasswords[key] ? "bi-eye" : "bi-eye-slash"} text-sm`} />
+                  </button>
+                </div>
+              ))}
 
               {/* Password strength */}
               {passwordForm.newPass && (() => {
-                const len = passwordForm.newPass.length;
+                const len      = passwordForm.newPass.length;
                 const hasUpper = /[A-Z]/.test(passwordForm.newPass);
                 const hasNum   = /[0-9]/.test(passwordForm.newPass);
                 const hasSpec  = /[^A-Za-z0-9]/.test(passwordForm.newPass);
                 const score    = [len >= 8, hasUpper, hasNum, hasSpec].filter(Boolean).length;
-                const labels   = ["", "Weak", "Fair", "Good", "Strong"];
+                const labels   = ["", "Weak",    "Fair",     "Good",    "Strong"     ];
                 const colors   = ["", "bg-red-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"];
                 const textCol  = ["", "text-red-400", "text-yellow-400", "text-blue-400", "text-green-400"];
                 return (
@@ -513,21 +471,6 @@ function Profile() {
                   </div>
                 );
               })()}
-
-              {/* Confirm */}
-              <div className="relative">
-                <Field
-                  id="confirm_pass" label="Confirm New Password"
-                  type={showPasswords.confirm ? "text" : "password"}
-                  value={passwordForm.confirm}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-                  error={passwordErrors.confirm}
-                />
-                <button type="button" onClick={() => toggleEye("confirm")}
-                  className="absolute right-3 top-4 text-gray-400 hover:text-gray-300 transition-colors">
-                  <i className={`bi ${showPasswords.confirm ? "bi-eye" : "bi-eye-slash"} text-sm`} />
-                </button>
-              </div>
 
               <div className="flex justify-end gap-2 pt-1">
                 <button type="button"
@@ -543,11 +486,9 @@ function Profile() {
             </form>
           )}
         </Card>
-        
+
         {/* ─── Personal Info ─── */}
-        <Card
-          title="Personal Information"
-          icon="bi-person-lines-fill"
+        <Card title="Personal Information" icon="bi-person-lines-fill"
           action={
             <button onClick={() => toggleSection("info")}
               className={`text-xs px-3 py-1 rounded transition-colors ${editSection === "info"
@@ -560,12 +501,12 @@ function Profile() {
           {editSection !== "info" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { label: "First Name",   value: user.firstName   },
-                { label: "Middle Name",  value: user.middleName  },
-                { label: "Last Name",    value: user.lastName    },
-                { label: "Email",        value: user.email       },
-                { label: "Phone",        value: user.phoneNumber },
-                { label: "Address",      value: user.address, span: true },
+                { label: "First Name",  value: user.firstName   },
+                { label: "Middle Name", value: user.middleName  },
+                { label: "Last Name",   value: user.lastName    },
+                { label: "Email",       value: user.email       },
+                { label: "Phone",       value: user.phoneNumber },
+                { label: "Address",     value: user.address, span: true },
               ].map(({ label, value, span }) => (
                 <div key={label} className={span ? "sm:col-span-2" : ""}>
                   <p className="text-gray-500 text-xs mb-0.5">{label}</p>
@@ -582,9 +523,9 @@ function Profile() {
                   onChange={(e) => setInfoForm({ ...infoForm, middleName: e.target.value })} />
                 <Field id="lastName"   label="Last Name"   value={infoForm.lastName}
                   onChange={(e) => setInfoForm({ ...infoForm, lastName: e.target.value })} />
-                <Field id="email"      label="Email"       type="email" value={infoForm.email}
-                  onChange={(e) => setInfoForm({ ...infoForm, email: e.target.value })} />
-                <Field id="phone"      label="Phone"       type="tel" value={infoForm.phoneNumber}
+                {/* Email is read-only — managed by Firebase Auth */}
+                <Field id="email" label="Email (locked)" value={user.email || ""} disabled />
+                <Field id="phone" label="Phone" type="tel" value={infoForm.phoneNumber}
                   onChange={(e) => setInfoForm({ ...infoForm, phoneNumber: e.target.value })} />
               </div>
               <Field id="address" label="Address" value={infoForm.address}
@@ -617,11 +558,8 @@ function Profile() {
                   <div key={i} className="flex justify-between items-center gap-3 py-1.5 text-sm border-b border-gray-700/40 last:border-0">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {product?.image ? (
-                        <img
-                          src={`http://localhost:5000${product.image}`}
-                          alt={product.name}
-                          className="w-8 h-8 rounded object-cover flex-shrink-0"
-                        />
+                        <img src={product.image} alt={product.name}
+                          className="w-8 h-8 rounded object-cover flex-shrink-0" />
                       ) : (
                         <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
                           <i className="bi bi-box text-gray-500 text-xs" />
@@ -629,9 +567,7 @@ function Profile() {
                       )}
                       <div className="min-w-0">
                         <p className="text-gray-300 text-sm truncate">{product?.name ?? `Product #${item.productId}`}</p>
-                        {product?.category && (
-                          <p className="text-gray-500 text-xs">{product.category}</p>
-                        )}
+                        {product?.category && <p className="text-gray-500 text-xs">{product.category}</p>}
                       </div>
                     </div>
                     <span className="text-white font-semibold bg-gray-700 px-2 py-0.5 rounded text-xs flex-shrink-0">x{item.quantity}</span>
@@ -684,22 +620,17 @@ function Profile() {
 
         {/* ─── Danger Zone ─── */}
         <Card title="Danger Zone" icon="bi-exclamation-triangle-fill">
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-4 bg-red-600/10 border border-red-600/30 rounded-lg">
-              <i className="bi bi-exclamation-triangle-fill text-red-400 text-xl flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-red-400 font-semibold text-sm mb-1">Delete Account</p>
-                <p className="text-gray-400 text-xs mb-3">
-                  Once you delete your account, there is no going back. All your data, orders, and cart will be permanently removed.
-                </p>
-                <button
-                  onClick={() => setEditSection("delete")}
-                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                >
-                  <i className="bi bi-trash mr-1.5" />
-                  Delete My Account
-                </button>
-              </div>
+          <div className="flex items-start gap-3 p-4 bg-red-600/10 border border-red-600/30 rounded-lg">
+            <i className="bi bi-exclamation-triangle-fill text-red-400 text-xl flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-red-400 font-semibold text-sm mb-1">Delete Account</p>
+              <p className="text-gray-400 text-xs mb-3">
+                Once you delete your account, there is no going back. All your data, orders, and cart will be permanently removed.
+              </p>
+              <button onClick={() => setEditSection("delete")}
+                className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+                <i className="bi bi-trash mr-1.5" />Delete My Account
+              </button>
             </div>
           </div>
         </Card>
@@ -708,25 +639,19 @@ function Profile() {
 
       {/* ─────────── DELETE ACCOUNT MODAL ─────────── */}
       {editSection === "delete" && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-fadeIn"
-          onClick={() => setEditSection(null)}
-        >
-          <div
-            className="bg-gray-900 rounded-xl max-w-md w-full border border-red-600/50 animate-slideUp"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-fadeIn"
+          onClick={() => setEditSection(null)}>
+          <div className="bg-gray-900 rounded-xl max-w-md w-full border border-red-600/50 animate-slideUp"
+            onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700/50">
               <h2 className="text-lg font-bold text-red-400 flex items-center gap-2">
-                <i className="bi bi-exclamation-triangle-fill" />
-                Delete Account?
+                <i className="bi bi-exclamation-triangle-fill" />Delete Account?
               </h2>
               <button onClick={() => setEditSection(null)}
                 className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
             </div>
 
             <div className="p-5 space-y-4">
-              {/* Warning list */}
               <div className="space-y-2 bg-red-600/10 border border-red-600/30 rounded-lg p-4">
                 <p className="text-red-400 font-semibold text-sm mb-2">This action will:</p>
                 <ul className="space-y-1.5 text-gray-300 text-xs">
@@ -738,14 +663,12 @@ function Profile() {
                     "Cannot be undone",
                   ].map((item, i) => (
                     <li key={i} className="flex items-center gap-2">
-                      <i className="bi bi-x-circle text-red-400 flex-shrink-0" />
-                      {item}
+                      <i className="bi bi-x-circle text-red-400 flex-shrink-0" />{item}
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* Password confirmation */}
               <div>
                 <p className="text-gray-400 text-sm mb-3">
                   Please enter your password to confirm account deletion:
@@ -754,53 +677,44 @@ function Profile() {
                   onSubmit={async (e) => {
                     e.preventDefault();
                     const pwd = e.target.confirmPassword.value;
-                    if (pwd !== user?.password) {
-                      addToast("Incorrect password.", "error");
-                      return;
-                    }
                     try {
-                      setProfileDeleted(true); // Set flag before deletion
-                      await axios.delete(`${BASE}/users/${userId}`);
-                      localStorage.removeItem("token");
+                      // Reauthenticate before deleting
+                      const credential = EmailAuthProvider.credential(auth.currentUser.email, pwd);
+                      await reauthenticateWithCredential(auth.currentUser, credential);
+
+                      setProfileDeleted(true);
+                      await deleteUser(userId);
+                      await logout();
                       localStorage.removeItem("user");
+
                       addToast("Account deleted successfully.", "success");
-                      setTimeout(() => {
-                        window.location.href = "/";
-                      }, 1500);
-                    } catch (error) {
+                      setTimeout(() => navigate("/"), 1500);
+                    } catch (err) {
                       setProfileDeleted(false);
-                      addToast("Failed to delete account.", "error");
+                      if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+                        addToast("Incorrect password.", "error");
+                      } else {
+                        addToast("Failed to delete account.", "error");
+                      }
                     }
                   }}
                   className="space-y-4"
                 >
                   <div className="relative">
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      placeholder=" "
-                      required
-                      autoComplete="off"
+                    <input type="password" name="confirmPassword" placeholder=" " required autoComplete="off"
                       className="w-full px-3 pt-6 pb-2 rounded-lg border border-red-600/50 bg-gray-800 text-white text-sm
-                        focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    />
+                        focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent" />
                     <label className="absolute left-3 top-1 text-xs pointer-events-none text-red-400">
                       Confirm Password
                     </label>
                   </div>
-
                   <div className="flex justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditSection(null)}
-                      className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                    >
+                    <button type="button" onClick={() => setEditSection(null)}
+                      className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
                       Cancel
                     </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                    >
+                    <button type="submit"
+                      className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
                       Delete My Account
                     </button>
                   </div>

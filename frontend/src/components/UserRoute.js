@@ -1,10 +1,12 @@
-import React from "react";
 import { Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const UserRoute = ({ children }) => {
-  const token = localStorage.getItem("token");
+  const { isLoggedIn, loading } = useAuth();
 
-  return token ? children : <Navigate to="/" />;
+  if (loading) return null;
+
+  return isLoggedIn ? children : <Navigate to="/" />;
 };
 
 export default UserRoute;
