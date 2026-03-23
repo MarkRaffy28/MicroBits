@@ -194,7 +194,9 @@ const Register = () => {
 
                   <form onSubmit={handleCheckUsername} className="space-y-6">
                     <div>
-                      <Label htmlFor="username">Username</Label>
+                      <Label htmlFor="username">
+                        Username
+                      </Label>
                       <div className="relative">
                         <input
                           id="username"
@@ -348,7 +350,7 @@ const Register = () => {
                         name="phoneNumber"
                         type="tel"
                         className={inputCls}
-                        placeholder="+63 9XX XXX XXXX"
+                        placeholder="09XXXXXXXXX"
                         value={formData.phoneNumber}
                         onChange={handleChange}
                         required

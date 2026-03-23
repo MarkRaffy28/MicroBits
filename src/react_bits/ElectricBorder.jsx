@@ -1,5 +1,20 @@
 import { useEffect, useRef, useCallback } from 'react';
-import './ElectricBorder.css';
+
+function hexToRgba(hex, alpha = 1) {
+  if (!hex) return `rgba(0,0,0,${alpha})`;
+  let h = hex.replace('#', '');
+  if (h.length === 3) {
+    h = h
+      .split('')
+      .map(c => c + c)
+      .join('');
+  }
+  const int = parseInt(h, 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 const ElectricBorder = ({
   children,
@@ -16,7 +31,6 @@ const ElectricBorder = ({
   const timeRef = useRef(0);
   const lastFrameTimeRef = useRef(0);
 
-  // Noise functions
   const random = useCallback(x => {
     return (Math.sin(x * 12.9898) * 43758.5453) % 1;
   }, []);
@@ -80,56 +94,48 @@ const ElectricBorder = ({
 
       let accumulated = 0;
 
-      // Top edge
       if (distance <= accumulated + straightWidth) {
         const progress = (distance - accumulated) / straightWidth;
         return { x: left + radius + progress * straightWidth, y: top };
       }
       accumulated += straightWidth;
 
-      // Top-right corner
       if (distance <= accumulated + cornerArc) {
         const progress = (distance - accumulated) / cornerArc;
         return getCornerPoint(left + width - radius, top + radius, radius, -Math.PI / 2, Math.PI / 2, progress);
       }
       accumulated += cornerArc;
 
-      // Right edge
       if (distance <= accumulated + straightHeight) {
         const progress = (distance - accumulated) / straightHeight;
         return { x: left + width, y: top + radius + progress * straightHeight };
       }
       accumulated += straightHeight;
 
-      // Bottom-right corner
       if (distance <= accumulated + cornerArc) {
         const progress = (distance - accumulated) / cornerArc;
         return getCornerPoint(left + width - radius, top + height - radius, radius, 0, Math.PI / 2, progress);
       }
       accumulated += cornerArc;
 
-      // Bottom edge
       if (distance <= accumulated + straightWidth) {
         const progress = (distance - accumulated) / straightWidth;
         return { x: left + width - radius - progress * straightWidth, y: top + height };
       }
       accumulated += straightWidth;
 
-      // Bottom-left corner
       if (distance <= accumulated + cornerArc) {
         const progress = (distance - accumulated) / cornerArc;
         return getCornerPoint(left + radius, top + height - radius, radius, Math.PI / 2, Math.PI / 2, progress);
       }
       accumulated += cornerArc;
 
-      // Left edge
       if (distance <= accumulated + straightHeight) {
         const progress = (distance - accumulated) / straightHeight;
         return { x: left, y: top + height - radius - progress * straightHeight };
       }
       accumulated += straightHeight;
 
-      // Top-left corner
       const progress = (distance - accumulated) / cornerArc;
       return getCornerPoint(left + radius, top + radius, radius, Math.PI, Math.PI / 2, progress);
     },
@@ -144,7 +150,6 @@ const ElectricBorder = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Configuration
     const octaves = 10;
     const lacunarity = 1.6;
     const gain = 0.7;
@@ -159,7 +164,6 @@ const ElectricBorder = ({
       const width = rect.width + borderOffset * 2;
       const height = rect.height + borderOffset * 2;
 
-      // Use device pixel ratio for sharp rendering
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = width * dpr;
       canvas.height = height * dpr;
@@ -179,7 +183,6 @@ const ElectricBorder = ({
       timeRef.current += deltaTime * speed;
       lastFrameTimeRef.current = currentTime;
 
-      // Clear canvas
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -219,7 +222,6 @@ const ElectricBorder = ({
           0,
           baseFlatness
         );
-
         const yNoise = octavedNoise(
           progress * 8,
           octaves,
@@ -248,7 +250,6 @@ const ElectricBorder = ({
       animationRef.current = requestAnimationFrame(drawElectricBorder);
     };
 
-    // Handle resize
     const resizeObserver = new ResizeObserver(() => {
       const newSize = updateSize();
       width = newSize.width;
@@ -256,7 +257,6 @@ const ElectricBorder = ({
     });
     resizeObserver.observe(container);
 
-    // Start animation
     animationRef.current = requestAnimationFrame(drawElectricBorder);
 
     return () => {
@@ -267,22 +267,33 @@ const ElectricBorder = ({
     };
   }, [color, speed, chaos, borderRadius, octavedNoise, getRoundedRectPoint]);
 
-  const vars = {
-    '--electric-border-color': color,
-    borderRadius: borderRadius
-  };
-
   return (
-    <div ref={containerRef} className={`electric-border ${className ?? ''}`} style={{ ...vars, ...style }}>
-      <div className="eb-canvas-container">
-        <canvas ref={canvasRef} className="eb-canvas" />
+    <div
+      ref={containerRef}
+      className={`relative overflow-visible isolate ${className ?? ''}`}
+      style={{ '--electric-border-color': color, borderRadius, ...style }}
+    >
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[2]">
+        <canvas ref={canvasRef} className="block" />
       </div>
-      <div className="eb-layers">
-        <div className="eb-glow-1" />
-        <div className="eb-glow-2" />
-        <div className="eb-background-glow" />
+      <div className="absolute inset-0 rounded-[inherit] pointer-events-none z-0">
+        <div
+          className="absolute inset-0 rounded-[inherit] pointer-events-none"
+          style={{ border: `2px solid ${hexToRgba(color, 0.6)}`, filter: 'blur(1px)' }}
+        />
+        <div
+          className="absolute inset-0 rounded-[inherit] pointer-events-none"
+          style={{ border: `2px solid ${color}`, filter: 'blur(4px)' }}
+        />
+        <div
+          className="absolute inset-0 rounded-[inherit] pointer-events-none -z-[1] scale-110 opacity-30"
+          style={{
+            filter: 'blur(32px)',
+            background: `linear-gradient(-30deg, ${color}, transparent, ${color})`
+          }}
+        />
       </div>
-      <div className="eb-content">{children}</div>
+      <div className="relative rounded-[inherit] z-[1]">{children}</div>
     </div>
   );
 };

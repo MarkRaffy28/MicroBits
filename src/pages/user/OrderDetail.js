@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
 import { useAuth } from "../../context/AuthContext";
 import { getOrderById, updateOrder, ORDER_STATUS_LABELS, TRACKING_STATUS_LABELS, CANCELLABLE_STATUSES } from "../../firebase/services/orders";
@@ -61,6 +61,7 @@ function OrderDetail() {
   const { addToast }    = useToast();
   const { currentUser } = useAuth();
   const { id }          = useParams();
+  const location        = useLocation();
   const navigate        = useNavigate();
 
   const [order,    setOrder]    = useState(null);
@@ -137,7 +138,7 @@ function OrderDetail() {
 
         {/* ─── Back + Title ─── */}
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/user/orders/all")}
+          <button onClick={() => location.key === 'default' ? navigate("/user/orders/all") : navigate(-1)}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors">
             <i className="bi bi-arrow-left" />
           </button>

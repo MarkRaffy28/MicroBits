@@ -21,8 +21,8 @@ function AdminLayout() {
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-blue-700 shadow-sm z-10">
-          <div className="flex items-center justify-between p-4">
+        <header className="bg-blue-700 min-h-[64px] shadow-sm z-10">
+          <div className="flex flex-wrap items-center justify-between gap-2 p-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={toggleSidebar}
@@ -35,7 +35,7 @@ function AdminLayout() {
                 {pageTitle}
               </h2>
             </div>
-            {headerAction}
+            {headerAction && <div className="flex items-center ml-auto w-full sm:w-auto">{headerAction}</div>}
           </div>
         </header>
 

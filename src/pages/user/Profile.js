@@ -54,6 +54,14 @@ const Card = ({ title, icon, children, action }) => (
   </div>
 );
 
+/* Reusable spinner for save buttons */
+const BtnSpinner = () => (
+  <svg className="animate-spin h-3.5 w-3.5 mr-1.5 inline" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+  </svg>
+);
+
 const STATUS_COLORS = {
   to_pay:        "bg-yellow-600",
   to_ship:       "bg-blue-600",
@@ -83,6 +91,14 @@ function Profile() {
   /* ─── Edit sections ─── */
   const [editSection, setEditSection] = useState(null);
   const toggleSection = (key) => setEditSection((prev) => (prev === key ? null : key));
+
+  /* ─── Per-section saving flags ─── */
+  const [saving, setSaving] = useState({
+    info: false, username: false, password: false,
+    email: false, avatar: false, delete: false,
+  });
+  const startSaving = (key) => setSaving((p) => ({ ...p, [key]: true  }));
+  const stopSaving  = (key) => setSaving((p) => ({ ...p, [key]: false }));
 
   /* ─── Form states ─── */
   const [infoForm, setInfoForm] = useState({
@@ -161,6 +177,7 @@ function Profile() {
   /* ─── Saves ─── */
   const saveInfo = async (e) => {
     e.preventDefault();
+    startSaving("info");
     try {
       const updated = await updateUser(userId, infoForm);
       setUser(updated);
@@ -168,6 +185,8 @@ function Profile() {
       setEditSection(null);
     } catch {
       addToast("Failed to update info.", "error");
+    } finally {
+      stopSaving("info");
     }
   };
 
@@ -175,6 +194,7 @@ function Profile() {
     e.preventDefault();
     if (usernameStatus === "taken") return;
     if (usernameStatus === "same") { setEditSection(null); return; }
+    startSaving("username");
     try {
       const updated = await updateUser(userId, { username: usernameForm.username.trim() });
       setUser(updated);
@@ -183,6 +203,8 @@ function Profile() {
       setEditSection(null);
     } catch {
       addToast("Failed to update username.", "error");
+    } finally {
+      stopSaving("username");
     }
   };
 
@@ -195,6 +217,7 @@ function Profile() {
     setPasswordErrors(errs);
     if (Object.keys(errs).length) return;
 
+    startSaving("password");
     try {
       const credential = EmailAuthProvider.credential(auth.currentUser.email, passwordForm.current);
       await reauthenticateWithCredential(auth.currentUser, credential);
@@ -209,6 +232,8 @@ function Profile() {
       } else {
         addToast("Failed to change password.", "error");
       }
+    } finally {
+      stopSaving("password");
     }
   };
 
@@ -222,6 +247,7 @@ function Profile() {
     setEmailErrors(errs);
     if (Object.keys(errs).length) return;
 
+    startSaving("email");
     try {
       const credential = EmailAuthProvider.credential(auth.currentUser.email, emailForm.confirmPassword);
       await reauthenticateWithCredential(auth.currentUser, credential);
@@ -237,6 +263,8 @@ function Profile() {
       } else {
         addToast("Failed to send verification email.", "error");
       }
+    } finally {
+      stopSaving("email");
     }
   };
 
@@ -254,6 +282,7 @@ function Profile() {
   const saveAvatar = async (e) => {
     e.preventDefault();
     if (!imageFile) return;
+    startSaving("avatar");
     try {
       const updated = await updateUser(userId, {}, imageFile);
       setUser(updated);
@@ -263,6 +292,8 @@ function Profile() {
       setEditSection(null);
     } catch {
       addToast("Failed to update picture.", "error");
+    } finally {
+      stopSaving("avatar");
     }
   };
 
@@ -374,12 +405,13 @@ function Profile() {
               <div className="flex justify-end gap-2 mt-4">
                 <button type="button"
                   onClick={() => { setEditSection(null); setImageFile(null); setImagePreview(null); }}
-                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors">
+                  disabled={saving.avatar}
+                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   Cancel
                 </button>
-                <button type="submit" disabled={!imageFile}
+                <button type="submit" disabled={!imageFile || saving.avatar}
                   className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  Save Picture
+                  {saving.avatar ? <><BtnSpinner />Saving…</> : "Save Picture"}
                 </button>
               </div>
             </form>
@@ -467,13 +499,14 @@ function Profile() {
               <div className="flex justify-end gap-2">
                 <button type="button"
                   onClick={() => { setEditSection(null); setUsernameForm({ username: user.username }); setUsernameStatus(null); }}
-                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors">
+                  disabled={saving.username}
+                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   Cancel
                 </button>
                 <button type="submit"
-                  disabled={usernameStatus === "taken" || usernameStatus === "checking" || !usernameForm.username.trim()}
+                  disabled={usernameStatus === "taken" || usernameStatus === "checking" || !usernameForm.username.trim() || saving.username}
                   className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  Update Username
+                  {saving.username ? <><BtnSpinner />Updating…</> : "Update Username"}
                 </button>
               </div>
             </form>
@@ -564,12 +597,13 @@ function Profile() {
               <div className="flex justify-end gap-2 pt-1">
                 <button type="button"
                   onClick={() => { setEditSection(null); setEmailErrors({}); setEmailForm({ newEmail: "", confirmPassword: "" }); }}
-                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors">
+                  disabled={saving.email}
+                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   Cancel
                 </button>
-                <button type="submit"
-                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
-                  Send Verification
+                <button type="submit" disabled={saving.email}
+                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {saving.email ? <><BtnSpinner />Sending…</> : "Send Verification"}
                 </button>
               </div>
             </form>
@@ -643,12 +677,13 @@ function Profile() {
               <div className="flex justify-end gap-2 pt-1">
                 <button type="button"
                   onClick={() => { setEditSection(null); setPasswordErrors({}); setPasswordForm({ current: "", newPass: "", confirm: "" }); }}
-                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors">
+                  disabled={saving.password}
+                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   Cancel
                 </button>
-                <button type="submit"
-                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
-                  Change Password
+                <button type="submit" disabled={saving.password}
+                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {saving.password ? <><BtnSpinner />Changing…</> : "Change Password"}
                 </button>
               </div>
             </form>
@@ -697,12 +732,13 @@ function Profile() {
                 onChange={(e) => setInfoForm({ ...infoForm, address: e.target.value })} />
               <div className="flex justify-end gap-2 pt-1">
                 <button type="button" onClick={() => setEditSection(null)}
-                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors">
+                  disabled={saving.info}
+                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   Cancel
                 </button>
-                <button type="submit"
-                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
-                  Save Changes
+                <button type="submit" disabled={saving.info}
+                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {saving.info ? <><BtnSpinner />Saving…</> : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -749,16 +785,16 @@ function Profile() {
           {orders.length === 0 ? (
             <p className="text-gray-500 text-sm italic">No orders placed yet.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-5 px-5">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-gray-500 text-xs uppercase border-b border-gray-700">
-                    <th className="text-left pb-2 pr-4">Order ID</th>
-                    <th className="text-left pb-2 pr-4">Items</th>
-                    <th className="text-left pb-2 pr-4">Total</th>
-                    <th className="text-left pb-2 pr-4">Payment</th>
-                    <th className="text-left pb-2 pr-4">Status</th>
-                    <th className="text-left pb-2">Date</th>
+                    <th className="text-left pb-2 pr-3 whitespace-nowrap">Order ID</th>
+                    <th className="text-center sm:text-left pb-2 pr-3 whitespace-nowrap">Items</th>
+                    <th className="text-center sm:text-left pb-2 pr-3 whitespace-nowrap">Total</th>
+                    <th className="text-center sm:text-left pb-2 pr-3 whitespace-nowrap hidden sm:table-cell">Payment</th>
+                    <th className="text-center sm:text-left pb-2 pr-3 whitespace-nowrap">Status</th>
+                    <th className="text-center sm:text-left pb-2 whitespace-nowrap hidden sm:table-cell">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/40">
@@ -766,18 +802,27 @@ function Profile() {
                     <tr key={o.id}
                       onClick={() => navigate(`/user/orders/detail/${o.id}`)}
                       className="hover:bg-gray-700/20 transition-colors cursor-pointer">
-                      <td className="py-2.5 pr-4 text-gray-400 font-mono text-xs truncate max-w-[80px]" title={o.id}>
+                      <td className="py-2.5 pr-3 text-gray-400 font-mono text-xs truncate max-w-[72px]" title={o.id}>
                         #{o.id}
                       </td>
-                      <td className="py-2.5 pr-4 text-gray-300">{o.items?.length ?? 0} item{(o.items?.length ?? 0) !== 1 ? "s" : ""}</td>
-                      <td className="py-2.5 pr-4 text-green-400 font-semibold">${o.totalAmount?.toFixed(2) ?? "0.00"}</td>
-                      <td className="py-2.5 pr-4 text-gray-400 text-xs">{o.paymentMethod}</td>
-                      <td className="py-2.5 pr-4">
-                        <span className={`text-xs px-2 py-0.5 rounded text-white font-medium ${STATUS_COLORS[o.status] ?? "bg-gray-600"}`}>
+                      <td className="py-2.5 pr-3 text-gray-300 text-center sm:text-left">
+                        {o.items?.length ?? 0} item{(o.items?.length ?? 0) !== 1 ? "s" : ""}
+                      </td>
+                      <td className="py-2.5 pr-3 text-green-400 font-semibold text-center sm:text-left">
+                        ${o.totalAmount?.toFixed(2) ?? "0.00"}
+                      </td>
+                      <td className="py-2.5 pr-3 text-gray-400 text-xs text-center sm:text-left hidden sm:table-cell">
+                        {o.paymentMethod}
+                      </td>
+                      <td className="py-2.5 pr-3 text-center sm:text-left">
+                        {/* whitespace-nowrap keeps the label on one line */}
+                        <span className={`inline-block text-xs px-2 py-0.5 rounded-full text-white font-medium whitespace-nowrap ${STATUS_COLORS[o.status] ?? "bg-gray-600"}`}>
                           {ORDER_STATUS_LABELS[o.status] ?? o.status}
                         </span>
                       </td>
-                      <td className="py-2.5 text-gray-500 text-xs">{formatDate(o.createdAt)}</td>
+                      <td className="py-2.5 text-gray-500 text-xs text-center sm:text-left hidden sm:table-cell">
+                        {formatDate(o.createdAt)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -808,15 +853,15 @@ function Profile() {
       {/* ─────────── DELETE ACCOUNT MODAL ─────────── */}
       {editSection === "delete" && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 animate-fadeIn"
-          onClick={() => setEditSection(null)}>
+          onClick={() => !saving.delete && setEditSection(null)}>
           <div className="bg-gray-900 rounded-xl max-w-md w-full border border-red-600/50 animate-slideUp"
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700/50">
               <h2 className="text-lg font-bold text-red-400 flex items-center gap-2">
                 <i className="bi bi-exclamation-triangle-fill" />Delete Account?
               </h2>
-              <button onClick={() => setEditSection(null)}
-                className="text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+              <button onClick={() => setEditSection(null)} disabled={saving.delete}
+                className="text-gray-400 hover:text-white text-xl leading-none disabled:opacity-50">&times;</button>
             </div>
             <div className="p-5 space-y-4">
               <div className="space-y-2 bg-red-600/10 border border-red-600/30 rounded-lg p-4">
@@ -836,6 +881,7 @@ function Profile() {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const pwd = e.target.confirmPassword.value;
+                  startSaving("delete");
                   try {
                     const credential = EmailAuthProvider.credential(auth.currentUser.email, pwd);
                     await reauthenticateWithCredential(auth.currentUser, credential);
@@ -846,6 +892,7 @@ function Profile() {
                     setTimeout(() => navigate("/"), 1500);
                   } catch (err) {
                     setProfileDeleted(false);
+                    stopSaving("delete");
                     if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
                       addToast("Incorrect password.", "error");
                     } else {
@@ -857,20 +904,22 @@ function Profile() {
               >
                 <div className="relative">
                   <input type="password" name="confirmPassword" placeholder=" " required autoComplete="off"
+                    disabled={saving.delete}
                     className="w-full px-3 pt-6 pb-2 rounded-lg border border-red-600/50 bg-gray-800 text-white text-sm
-                      focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent" />
+                      focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent
+                      disabled:opacity-50 disabled:cursor-not-allowed" />
                   <label className="absolute left-3 top-1 text-xs pointer-events-none text-red-400">
                     Confirm Password
                   </label>
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
-                  <button type="button" onClick={() => setEditSection(null)}
-                    className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                  <button type="button" onClick={() => setEditSection(null)} disabled={saving.delete}
+                    className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     Cancel
                   </button>
-                  <button type="submit"
-                    className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-                    Delete My Account
+                  <button type="submit" disabled={saving.delete}
+                    className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    {saving.delete ? <><BtnSpinner />Deleting…</> : "Delete My Account"}
                   </button>
                 </div>
               </form>

@@ -362,7 +362,7 @@ function Dashboard() {
                       <p className="text-gray-500 text-xs">{p.category}</p>
                     </div>
                   </div>
-                  <span className={`text-sm font-bold ${p.stock === 0 ? "text-red-400" : "text-orange-400"}`}>
+                  <span className={`text-sm text-end font-bold ${p.stock === 0 ? "text-red-400" : "text-orange-400"}`}>
                     {p.stock === 0 ? "Out of stock" : `${p.stock} left`}
                   </span>
                 </div>

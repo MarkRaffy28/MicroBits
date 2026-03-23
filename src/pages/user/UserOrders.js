@@ -29,7 +29,7 @@ const STATUS_COLORS = {
 };
 
 const StatusBadge = ({ status }) => (
-  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold text-white ${STATUS_COLORS[status] ?? "bg-gray-600"}`}>
+  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs text-center font-semibold text-white ${STATUS_COLORS[status] ?? "bg-gray-600"}`}>
     {ORDER_STATUS_LABELS[status] ?? status}
   </span>
 );
@@ -181,7 +181,7 @@ function UserOrders() {
         <div className="space-y-3">
           {sorted.map((order) => (
             <div key={order.id}
-              onClick={() => navigate(`/user/order/detail/${order.id}`)}
+              onClick={() => navigate(`/user/orders/detail/${order.id}`)}
               className="bg-gray-800 rounded-xl border border-gray-700/50 overflow-hidden hover:border-gray-600/70 transition-colors cursor-pointer">
 
               {/* Card header */}
@@ -192,7 +192,7 @@ function UserOrders() {
                   </span>
                   <StatusBadge status={order.status} />
                 </div>
-                <span className="text-gray-500 text-xs">{formatDate(order.createdAt)}</span>
+                <span className="text-gray-500 text-xs text-end">{formatDate(order.createdAt)}</span>
               </div>
 
               {/* Items preview */}

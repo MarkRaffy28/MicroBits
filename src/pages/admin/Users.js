@@ -1,14 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
-import Switch from "../../components/Switch";
-import {
-  getAllUsers,
-  createUser,
-  updateUser,
-  deleteUser as firebaseDeleteUser,
-} from "../../firebase/services/users";
+import { getAllUsers, createUser, updateUser, deleteUser as firebaseDeleteUser, } from "../../firebase/services/users";
 import "../../styles/StyleSheet.css";
 
 /* ─── Spinner ─── */
@@ -65,14 +59,36 @@ const ImageUpload = ({ imagePreview, onImageChange }) => (
   </div>
 );
 
+/* ─── Sort columns ─── */
+const SORT_COLUMNS = [
+  { key: "id",          label: "ID"        },
+  { key: "username",    label: "Username"  },
+  { key: "firstName",   label: "First Name"},
+  { key: "email",       label: "Email"     },
+  { key: "role",        label: "Role"      },
+  { key: "createdAt",   label: "Joined"    },
+  { key: "cartCount",   label: "Cart"      },
+];
+
 function Users() {
   const { addToast } = useToast();
   const { role } = useParams();
   const { setPageTitle, setHeaderAction } = useOutletContext();
   const activeRole = role || "all";
 
-  /* ─── Full table toggle ─── */
-  const [showFull, setShowFull] = useState(false);
+  /* ─── Search & sort ─── */
+  const [searchQuery,  setSearchQuery]  = useState("");
+  const [sortCol,      setSortCol]      = useState("id");
+  const [sortDir,      setSortDir]      = useState("asc");
+  const [sortOpen,     setSortOpen]     = useState(false);
+  const sortRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => { if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   /* ─── Modal state ─── */
   const [showAddModal,    setShowAddModal]    = useState(false);
@@ -138,17 +154,89 @@ function Users() {
   useEffect(() => {
     setPageTitle("Users");
     setHeaderAction(
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 w-full">
+        {/* Search */}
+        <div className="relative w-full sm:w-auto">
+          <i className="bi bi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search users…"
+            className="pl-7 pr-7 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-white placeholder-gray-500
+              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all w-full sm:w-36 md:w-48 h-8"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+              <i className="bi bi-x text-sm" />
+            </button>
+          )}
+        </div>
+
+        {/* Sort */}
+        <div className="relative" ref={sortRef}>
+          <button
+            onClick={() => setSortOpen((v) => !v)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded border transition-all h-8 ${
+              sortOpen ? "bg-blue-600 border-blue-500 text-white" : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500"
+            }`}>
+            <i className="bi bi-sort-down text-base" />
+            <span className="hidden sm:inline">Sort</span>
+          </button>
+
+          {sortOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+              {/* Column section */}
+              <div className="px-3 pt-2.5 pb-1">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5">Column</p>
+                <div className="space-y-0.5">
+                  {SORT_COLUMNS.map(({ key, label }) => (
+                    <button key={key}
+                      onClick={() => setSortCol(key)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded text-sm transition-colors ${
+                        sortCol === key ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-800"
+                      }`}>
+                      {sortCol === key && <i className="bi bi-check mr-1.5 text-xs" />}
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-gray-700 mx-3 my-2" />
+
+              {/* Direction section */}
+              <div className="px-3 pb-2.5">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5">Direction</p>
+                <div className="flex gap-1.5">
+                  {[
+                    { val: "asc",  icon: "bi-sort-up",   label: "Asc"  },
+                    { val: "desc", icon: "bi-sort-down",  label: "Desc" },
+                  ].map(({ val, icon, label }) => (
+                    <button key={val}
+                      onClick={() => setSortDir(val)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-sm transition-colors ${
+                        sortDir === val ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      }`}>
+                      <i className={`bi ${icon}`} />{label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         <button
-          className="bg-green-600 hover:bg-green-700 text-neutral-200 text-sm px-3 py-1 rounded transition-all duration-200 transform hover:scale-105"
+          className="bg-green-600 hover:bg-green-700 text-neutral-200 text-xs px-3 h-8 rounded transition-all duration-200 transform hover:scale-105"
           onClick={handleAddShow}>
           Add
         </button>
-        <Switch id="full-table-switch" checked={showFull} onChange={setShowFull} label="Show full table" />
       </div>
     );
     return () => { setPageTitle("Admin"); setHeaderAction(null); };
-  }, [showFull]);
+  }, [searchQuery, sortCol, sortDir, sortOpen]);
 
   useEffect(() => { fetchUsers(); }, [activeRole]);
 
@@ -176,6 +264,32 @@ function Users() {
       {r}
     </span>
   );
+
+  /* ─── Filter + sort ─── */
+  const displayedUsers = [...users]
+    .filter((u) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        u.id?.toString().toLowerCase().includes(q) ||
+        u.username?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.firstName?.toLowerCase().includes(q) ||
+        u.lastName?.toLowerCase().includes(q) ||
+        u.role?.toLowerCase().includes(q) ||
+        u.phoneNumber?.toLowerCase().includes(q) ||
+        u.address?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      let aVal, bVal;
+      if (sortCol === "cartCount") { aVal = cartCount(a); bVal = cartCount(b); }
+      else if (sortCol === "createdAt") { aVal = new Date(a.createdAt || 0); bVal = new Date(b.createdAt || 0); }
+      else { aVal = (a[sortCol] ?? "").toString().toLowerCase(); bVal = (b[sortCol] ?? "").toString().toLowerCase(); }
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
 
   /* ─── ADD ─── */
   const addUser = async (e) => {
@@ -234,18 +348,17 @@ function Users() {
   const selectCls    = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white";
 
   /* ─── Table rows ─── */
-  const userRows = users.map((user) => (
+  const userRows = displayedUsers.map((user) => (
     <>
       <td className="text-center px-3 py-3"><Avatar src={user.profilePicture} name={user.username} /></td>
-      <td className="text-center px-3 py-3 text-sm">{user.id}</td>
+      <td className="text-center px-3 py-3 text-sm font-mono">
+        <span className="inline-block max-w-[80px] truncate align-bottom text-right" dir="rtl" title={user.id}>
+          {user.id}
+        </span>
+      </td>
       <td className="text-center px-3 py-3 text-sm font-medium">{user.username}</td>
       <td className="text-center px-3 py-3 text-sm">{getFullName(user)}</td>
       <td className="text-center px-3 py-3 text-sm">{user.email || <span className="text-gray-500 italic">N/A</span>}</td>
-      {showFull && <>
-        <td className="text-center px-3 py-3 text-sm">{user.phoneNumber || <span className="text-gray-500 italic">N/A</span>}</td>
-        <td className="text-center px-3 py-3 text-sm">{user.address    || <span className="text-gray-500 italic">N/A</span>}</td>
-        <td className="text-center px-3 py-3 text-sm">{formatDate(user.createdAt)}</td>
-      </>}
       <td className="text-center px-3 py-3">{roleBadge(user.role)}</td>
       <td className="text-center px-3 py-3">
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${cartCount(user) > 0 ? "bg-orange-600 text-white" : "bg-gray-700 text-gray-400"}`}>
@@ -279,6 +392,11 @@ function Users() {
             <Spinner />
             <span>Loading users...</span>
           </div>
+        ) : displayedUsers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+            <i className="bi bi-search text-5xl mb-3" />
+            <p>No users found for "<span className="text-gray-300">{searchQuery}</span>"</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse">
@@ -289,11 +407,6 @@ function Users() {
                   <th className="text-center px-3 py-3">Username</th>
                   <th className="text-center px-3 py-3">Full Name</th>
                   <th className="text-center px-3 py-3">Email</th>
-                  {showFull && <>
-                    <th className="text-center px-3 py-3">Phone</th>
-                    <th className="text-center px-3 py-3">Address</th>
-                    <th className="text-center px-3 py-3">Joined</th>
-                  </>}
                   <th className="text-center px-3 py-3">Role</th>
                   <th className="text-center px-3 py-3">Cart</th>
                   <th className="text-center px-3 py-3">Actions</th>

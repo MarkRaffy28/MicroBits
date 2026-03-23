@@ -1,16 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
-import {
-  getAllProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct as firebaseDeleteProduct,
-} from "../../firebase/services/products";
+import { getAllProducts, createProduct, updateProduct, deleteProduct as firebaseDeleteProduct, } from "../../firebase/services/products";
 import "../../styles/StyleSheet.css";
 
-const truncate = (text, maxWords = 10) => {
+const truncateWords = (text, maxWords = 8) => {
   if (!text) return "";
   const words = text.trim().split(/\s+/);
   return words.length <= maxWords ? text : words.slice(0, maxWords).join(" ") + "...";
@@ -24,22 +19,118 @@ const Spinner = () => (
   </svg>
 );
 
+/* ─── Sort columns ─── */
+const SORT_COLUMNS = [
+  { key: "id",          label: "ID"          },
+  { key: "name",        label: "Name"        },
+  { key: "category",    label: "Category"    },
+  { key: "price",       label: "Price"       },
+  { key: "stock",       label: "Stock"       },
+];
+
 function Products() {
   const { addToast } = useToast();
   const { setPageTitle, setHeaderAction } = useOutletContext();
 
+  /* ─── Search & sort ─── */
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortCol,     setSortCol]     = useState("id");
+  const [sortDir,     setSortDir]     = useState("asc");
+  const [sortOpen,    setSortOpen]    = useState(false);
+  const sortRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   useEffect(() => {
     setPageTitle("Products");
     setHeaderAction(
-      <button
-        className="bg-green-600 hover:bg-green-700 text-neutral-200 text-sm px-3 py-1 rounded transition-all duration-200 transform hover:scale-105"
-        onClick={handleAddShow}
-      >
-        Add
-      </button>
+      <div className="flex items-center gap-2 w-full">
+        {/* Search */}
+        <div className="relative w-full sm:w-auto">
+          <i className="bi bi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search products…" 
+            className="pl-7 pr-7 py-1 text-xs h-8 bg-gray-800 border border-gray-700 rounded text-white placeholder-gray-500
+              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all w-full sm:w-36 md:w-48"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+              <i className="bi bi-x text-sm" />
+            </button>
+          )}
+        </div>
+
+        {/* Sort */}
+        <div className="relative" ref={sortRef}>
+          <button
+            onClick={() => setSortOpen((v) => !v)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs h-8 rounded border transition-all ${
+              sortOpen ? "bg-blue-600 border-blue-500 text-white" : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500"
+            }`}>
+            <i className="bi bi-sort-down text-base" />
+            <span className="hidden sm:inline">Sort</span>
+          </button>
+
+          {sortOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+              {/* Column section */}
+              <div className="px-3 pt-2.5 pb-1">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5">Column</p>
+                <div className="space-y-0.5">
+                  {SORT_COLUMNS.map(({ key, label }) => (
+                    <button key={key}
+                      onClick={() => setSortCol(key)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded text-sm transition-colors ${
+                        sortCol === key ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-800"
+                      }`}>
+                      {sortCol === key && <i className="bi bi-check mr-1.5 text-xs" />}
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-gray-700 mx-3 my-2" />
+
+              {/* Direction section */}
+              <div className="px-3 pb-2.5">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5">Direction</p>
+                <div className="flex gap-1.5">
+                  {[
+                    { val: "asc",  icon: "bi-sort-up",   label: "Asc"  },
+                    { val: "desc", icon: "bi-sort-down",  label: "Desc" },
+                  ].map(({ val, icon, label }) => (
+                    <button key={val}
+                      onClick={() => setSortDir(val)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-sm transition-colors ${
+                        sortDir === val ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      }`}>
+                      <i className={`bi ${icon}`} />{label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button
+          className="bg-green-600 hover:bg-green-700 text-neutral-200 text-sm px-3 py-1.5 rounded transition-all duration-200 transform hover:scale-105"
+          onClick={handleAddShow}>
+          Add
+        </button>
+      </div>
     );
     return () => { setPageTitle("Admin"); setHeaderAction(null); };
-  }, []);
+  }, [searchQuery, sortCol, sortDir, sortOpen]);
 
   /* ─── Modal state ─── */
   const [showAddModal,    setShowAddModal]    = useState(false);
@@ -63,7 +154,7 @@ function Products() {
   const handleViewShow    = (product) => { setSelectedProduct(product); setShowViewModal(true); };
 
   /* ─── Product state ─── */
-  const [products,       setProducts]       = useState([]);
+  const [products,         setProducts]         = useState([]);
   const [fetchingProducts, setFetchingProducts] = useState(true);
 
   /* ─── Per-operation loading state ─── */
@@ -98,6 +189,34 @@ function Products() {
       reader.readAsDataURL(file);
     }
   };
+
+  /* ─── Filter + sort ─── */
+  const displayedProducts = [...products]
+    .filter((p) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        p.id?.toString().toLowerCase().includes(q) ||
+        p.name?.toLowerCase().includes(q) ||
+        p.category?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q) ||
+        p.price?.toString().includes(q) ||
+        p.stock?.toString().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      let aVal, bVal;
+      if (sortCol === "price" || sortCol === "stock") {
+        aVal = Number(a[sortCol] ?? 0);
+        bVal = Number(b[sortCol] ?? 0);
+      } else {
+        aVal = (a[sortCol] ?? "").toString().toLowerCase();
+        bVal = (b[sortCol] ?? "").toString().toLowerCase();
+      }
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
 
   /* ─── Add ─── */
   const blankProduct = { name: "", category: "", description: "", price: "", stock: "" };
@@ -180,9 +299,13 @@ function Products() {
   );
 
   /* ─── Table rows ─── */
-  const productRows = products.map((product) => (
+  const productRows = displayedProducts.map((product) => (
     <>
-      <td className="text-center px-4 py-3">{product.id}</td>
+      <td className="text-center px-4 py-3 font-mono text-sm">
+        <span className="inline-block max-w-[80px] truncate align-bottom" title={product.id}>
+          {product.id}
+        </span>
+      </td>
       <td className="text-center px-4 py-3">
         {product.image ? (
           <img src={product.image} alt={product.name} loading="lazy" decoding="async"
@@ -193,30 +316,27 @@ function Products() {
           </div>
         )}
       </td>
-      <td className="text-center px-4 py-3">{product.name}</td>
+      <td className="text-center px-4 py-3">{truncateWords(product.name, 5)}</td>
       <td className="text-center px-4 py-3">{product.category}</td>
       <td className="text-center px-4 py-3 text-sm text-gray-300" title={product.description}>
-        {truncate(product.description)}
+        {truncateWords(product.description)}
       </td>
       <td className="text-center px-4 py-3">${product.price}</td>
       <td className="text-center px-4 py-3">{product.stock}</td>
       <td className="text-center px-4 py-3 whitespace-nowrap">
         <button
           className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded mr-2 transition-all duration-200 transform hover:scale-105"
-          onClick={(e) => { e.stopPropagation(); handleViewShow(product); }}
-        >
+          onClick={(e) => { e.stopPropagation(); handleViewShow(product); }}>
           <i className="bi bi-eye mr-1" />View
         </button>
         <button
           className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 text-sm px-3 py-1.5 rounded mr-2 transition-all duration-200 transform hover:scale-105"
-          onClick={(e) => { e.stopPropagation(); handleEditShow(product); }}
-        >
+          onClick={(e) => { e.stopPropagation(); handleEditShow(product); }}>
           <i className="bi bi-pencil mr-1" />Edit
         </button>
         <button
           className="bg-red-500 hover:bg-red-600 text-neutral-100 text-sm px-3 py-1.5 rounded transition-all duration-200 transform hover:scale-105"
-          onClick={(e) => { e.stopPropagation(); handleDeleteShow(product); }}
-        >
+          onClick={(e) => { e.stopPropagation(); handleDeleteShow(product); }}>
           <i className="bi bi-trash mr-[3px]" />Delete
         </button>
       </td>
@@ -230,6 +350,11 @@ function Products() {
           <div className="flex items-center justify-center py-20 gap-3 text-gray-400">
             <Spinner />
             <span>Loading products...</span>
+          </div>
+        ) : displayedProducts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+            <i className="bi bi-search text-5xl mb-3" />
+            <p>No products found for "<span className="text-gray-300">{searchQuery}</span>"</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

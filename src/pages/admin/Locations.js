@@ -1,15 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
-import {
-  getAllLocations,
-  createLocation,
-  updateLocation,
-  deactivateLocation,
-  deleteLocation as firebaseDeleteLocation,
-  LOCATION_TYPES,
-} from "../../firebase/services/locations";
+import { getAllLocations, createLocation, updateLocation, deactivateLocation, deleteLocation as firebaseDeleteLocation, LOCATION_TYPES, } from "../../firebase/services/locations";
 import "../../styles/StyleSheet.css";
 
 // =========================
@@ -42,7 +35,6 @@ const LocationForm = ({ data, setData, onSubmit, isLoading, onClose, submitLabel
         <Field id={`${submitLabel}_name`} label="Name *" value={data.name}
           onChange={(e) => setData({ ...data, name: e.target.value })} required />
       </div>
-
       <div className="mb-3 relative">
         <select id={`${submitLabel}_type`} value={data.type}
           onChange={(e) => setData({ ...data, type: e.target.value })} className={selectCls}>
@@ -52,30 +44,23 @@ const LocationForm = ({ data, setData, onSubmit, isLoading, onClose, submitLabel
         </select>
         <label htmlFor={`${submitLabel}_type`} className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Type</label>
       </div>
-
       <Field id={`${submitLabel}_postal`} label="Postal Code" value={data.postalCode}
         onChange={(e) => setData({ ...data, postalCode: e.target.value })} />
-
       <div className="sm:col-span-2">
         <Field id={`${submitLabel}_address`} label="Address *" value={data.address}
           onChange={(e) => setData({ ...data, address: e.target.value })} required />
       </div>
-
       <Field id={`${submitLabel}_city`} label="City *" value={data.city}
         onChange={(e) => setData({ ...data, city: e.target.value })} required />
-
       <Field id={`${submitLabel}_country`} label="Country *" value={data.country}
         onChange={(e) => setData({ ...data, country: e.target.value })} required />
-
       <Field id={`${submitLabel}_lat`} label="Latitude" type="number"
         value={data.coordinates?.lat ?? ""}
         onChange={(e) => setData({ ...data, coordinates: { ...data.coordinates, lat: Number(e.target.value) } })} />
-
       <Field id={`${submitLabel}_lng`} label="Longitude" type="number"
         value={data.coordinates?.lng ?? ""}
         onChange={(e) => setData({ ...data, coordinates: { ...data.coordinates, lng: Number(e.target.value) } })} />
     </div>
-
     <div className="pt-2 flex justify-center gap-3">
       <button type="button" onClick={onClose} disabled={isLoading}
         className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
@@ -115,6 +100,16 @@ const statusBadge = (active) => (
   </span>
 );
 
+/* ─── Sort columns ─── */
+const SORT_COLUMNS = [
+  { key: "id",      label: "ID"      },
+  { key: "name",    label: "Name"    },
+  { key: "type",    label: "Type"    },
+  { key: "city",    label: "City"    },
+  { key: "country", label: "Country" },
+  { key: "active",  label: "Status"  },
+];
+
 // =========================
 // Main Component
 // =========================
@@ -132,6 +127,19 @@ const blankEdit = {
 function Locations() {
   const { addToast } = useToast();
   const { setPageTitle, setHeaderAction } = useOutletContext();
+
+  /* ─── Search & sort ─── */
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortCol,     setSortCol]     = useState("name");
+  const [sortDir,     setSortDir]     = useState("asc");
+  const [sortOpen,    setSortOpen]    = useState(false);
+  const sortRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   /* ─── Modal state ─── */
   const [showAddModal,     setShowAddModal]     = useState(false);
@@ -179,15 +187,85 @@ function Locations() {
   useEffect(() => {
     setPageTitle("Locations");
     setHeaderAction(
-      <button
-        className="bg-green-600 hover:bg-green-700 text-neutral-200 text-sm px-3 py-1 rounded transition-all duration-200 transform hover:scale-105"
-        onClick={handleAddShow}
-      >
-        Add
-      </button>
+      <div className="flex items-center gap-2 w-full">
+        {/* Search */}
+        <div className="relative w-full sm:w-auto">
+          <i className="bi bi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search locations…"
+            className="pl-7 pr-7 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-white placeholder-gray-500
+              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all w-full sm:w-36 md:w-48 h-8"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+              <i className="bi bi-x text-sm" />
+            </button>
+          )}
+        </div>
+
+        {/* Sort */}
+        <div className="relative" ref={sortRef}>
+          <button
+            onClick={() => setSortOpen((v) => !v)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded border transition-all h-8 ${
+              sortOpen ? "bg-blue-600 border-blue-500 text-white" : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500"
+            }`}>
+            <i className="bi bi-sort-down text-base" />
+            <span className="hidden sm:inline">Sort</span>
+          </button>
+
+          {sortOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className="px-3 pt-2.5 pb-1">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5">Column</p>
+                <div className="space-y-0.5">
+                  {SORT_COLUMNS.map(({ key, label }) => (
+                    <button key={key}
+                      onClick={() => setSortCol(key)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded text-sm transition-colors ${
+                        sortCol === key ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-800"
+                      }`}>
+                      {sortCol === key && <i className="bi bi-check mr-1.5 text-xs" />}
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="border-t border-gray-700 mx-3 my-2" />
+              <div className="px-3 pb-2.5">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5">Direction</p>
+                <div className="flex gap-1.5">
+                  {[
+                    { val: "asc",  icon: "bi-sort-up",   label: "Asc"  },
+                    { val: "desc", icon: "bi-sort-down",  label: "Desc" },
+                  ].map(({ val, icon, label }) => (
+                    <button key={val}
+                      onClick={() => setSortDir(val)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-sm transition-colors ${
+                        sortDir === val ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      }`}>
+                      <i className={`bi ${icon}`} />{label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button
+          className="bg-green-600 hover:bg-green-700 text-neutral-200 text-sm px-3 py-1 rounded transition-all duration-200 transform hover:scale-105"
+          onClick={handleAddShow}>
+          Add
+        </button>
+      </div>
     );
     return () => { setPageTitle("Admin"); setHeaderAction(null); };
-  }, []);
+  }, [searchQuery, sortCol, sortDir, sortOpen]);
 
   useEffect(() => { fetchLocations(); }, []);
 
@@ -202,6 +280,30 @@ function Locations() {
       setFetchingLocations(false);
     }
   };
+
+  /* ─── Filter + sort ─── */
+  const displayedLocations = [...locations]
+    .filter((l) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        l.id?.toString().toLowerCase().includes(q) ||
+        l.name?.toLowerCase().includes(q) ||
+        l.type?.toLowerCase().includes(q) ||
+        l.city?.toLowerCase().includes(q) ||
+        l.country?.toLowerCase().includes(q) ||
+        l.address?.toLowerCase().includes(q) ||
+        l.postalCode?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      let aVal, bVal;
+      if (sortCol === "active") { aVal = a.active ? 1 : 0; bVal = b.active ? 1 : 0; }
+      else { aVal = (a[sortCol] ?? "").toString().toLowerCase(); bVal = (b[sortCol] ?? "").toString().toLowerCase(); }
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
 
   /* ─── Add ─── */
   const addLocation = async (e) => {
@@ -262,9 +364,11 @@ function Locations() {
   const modalBox     = "bg-gray-900 rounded-lg w-full mx-4 lg:w-1/2 lg:mx-auto max-h-[90vh] overflow-y-auto animate-slideUp";
 
   /* ─── Table rows ─── */
-  const locationRows = locations.map((loc) => (
+  const locationRows = displayedLocations.map((loc) => (
     <>
-      <td className="text-center px-4 py-3 text-xs text-gray-500 max-w-[80px] truncate" title={loc.id}>{loc.id}</td>
+      <td className="text-center px-4 py-3 font-mono">
+        <span className="inline-block max-w-[80px] truncate align-bottom text-xs text-gray-500" title={loc.id}>{loc.id}</span>
+      </td>
       <td className="text-center px-4 py-3 font-medium">{loc.name}</td>
       <td className="text-center px-4 py-3">{typeBadge(loc.type)}</td>
       <td className="text-center px-4 py-3 text-sm text-gray-300">{loc.city}</td>
@@ -304,6 +408,11 @@ function Locations() {
           <div className="flex items-center justify-center py-20 gap-3 text-gray-400">
             <Spinner />
             <span>Loading locations...</span>
+          </div>
+        ) : displayedLocations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+            <i className="bi bi-search text-5xl mb-3" />
+            <p>No locations found for "<span className="text-gray-300">{searchQuery}</span>"</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -412,7 +521,6 @@ function Locations() {
                 className="hover:opacity-70 text-2xl leading-none disabled:opacity-30">&times;</button>
             </div>
             <div className="p-4">
-              {/* Active toggle */}
               <div className="flex items-center justify-between mb-4 bg-gray-800 border border-gray-700 rounded px-4 py-3">
                 <span className="text-gray-300 text-sm font-medium">Location Active</span>
                 <button type="button"

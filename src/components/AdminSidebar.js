@@ -111,7 +111,7 @@ function AdminSidebar({ isOpen, onClose }) {
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 bg-blue-700">
+          <div className="flex items-center justify-between p-4 h-[64px] bg-blue-700">
             <h1 className="text-xl font-bold">Admin Panel</h1>
             <button
               onClick={onClose}

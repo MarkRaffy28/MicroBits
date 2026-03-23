@@ -1,18 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
-import {
-  getAllOrders,
-  updateOrder,
-  updateOrderItems,
-  addTrackingEvent,
-  deleteOrder as firebaseDeleteOrder,
-  ORDER_STATUSES,
-  ORDER_STATUS_LABELS,
-  TRACKING_STATUSES,
-  TRACKING_STATUS_LABELS,
-} from "../../firebase/services/orders";
+import { getAllOrders, updateOrder, updateOrderItems, addTrackingEvent, deleteOrder as firebaseDeleteOrder, ORDER_STATUSES, ORDER_STATUS_LABELS, TRACKING_STATUSES, TRACKING_STATUS_LABELS, } from "../../firebase/services/orders";
 import { getAllProducts } from "../../firebase/services/products";
 import { getAllUsers }    from "../../firebase/services/users";
 import { getAllLocations } from "../../firebase/services/locations";
@@ -40,7 +30,7 @@ const STATUS_COLORS = {
 };
 
 const StatusBadge = ({ status }) => (
-  <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold text-white ${STATUS_COLORS[status] ?? "bg-gray-600"}`}>
+  <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold text-white whitespace-nowrap ${STATUS_COLORS[status] ?? "bg-gray-600"}`}>
     {ORDER_STATUS_LABELS[status] ?? status}
   </span>
 );
@@ -53,6 +43,17 @@ const formatDate = (d) => {
 
 const selectCls = "w-full px-3 pt-5 pb-2 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white";
 
+/* ─── Sort columns ─── */
+const SORT_COLUMNS = [
+  { key: "id",          label: "Order ID"  },
+  { key: "fullName",    label: "Full Name" },
+  { key: "itemCount",   label: "Items"     },
+  { key: "totalAmount", label: "Total"     },
+  { key: "status",      label: "Status"    },
+  { key: "paymentMethod", label: "Payment" },
+  { key: "createdAt",   label: "Date"      },
+];
+
 // =========================
 // Main Component
 // =========================
@@ -63,11 +64,95 @@ function Orders() {
   const { setPageTitle, setHeaderAction } = useOutletContext();
   const activeStatus = status || "all";
 
+  /* ─── Search & sort ─── */
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortCol,     setSortCol]     = useState("createdAt");
+  const [sortDir,     setSortDir]     = useState("desc");
+  const [sortOpen,    setSortOpen]    = useState(false);
+  const sortRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   useEffect(() => {
     setPageTitle("Orders");
-    setHeaderAction(null);
+    setHeaderAction(
+      <div className="flex items-center gap-2 w-full">
+        {/* Search */}
+        <div className="relative w-full sm:w-auto">
+          <i className="bi bi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search orders…"
+            className="pl-7 pr-7 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-white placeholder-gray-500
+              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all w-full sm:w-36 md:w-48 h-8"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+              <i className="bi bi-x text-sm" />
+            </button>
+          )}
+        </div>
+
+        {/* Sort */}
+        <div className="relative" ref={sortRef}>
+          <button
+            onClick={() => setSortOpen((v) => !v)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded border transition-all h-8 ${
+              sortOpen ? "bg-blue-600 border-blue-500 text-white" : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500"
+            }`}>
+            <i className="bi bi-sort-down text-base" />
+            <span className="hidden sm:inline">Sort</span>
+          </button>
+
+          {sortOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className="px-3 pt-2.5 pb-1">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5">Column</p>
+                <div className="space-y-0.5">
+                  {SORT_COLUMNS.map(({ key, label }) => (
+                    <button key={key}
+                      onClick={() => setSortCol(key)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded text-sm transition-colors ${
+                        sortCol === key ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-800"
+                      }`}>
+                      {sortCol === key && <i className="bi bi-check mr-1.5 text-xs" />}
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="border-t border-gray-700 mx-3 my-2" />
+              <div className="px-3 pb-2.5">
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5">Direction</p>
+                <div className="flex gap-1.5">
+                  {[
+                    { val: "asc",  icon: "bi-sort-up",   label: "Asc"  },
+                    { val: "desc", icon: "bi-sort-down",  label: "Desc" },
+                  ].map(({ val, icon, label }) => (
+                    <button key={val}
+                      onClick={() => setSortDir(val)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-sm transition-colors ${
+                        sortDir === val ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      }`}>
+                      <i className={`bi ${icon}`} />{label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
     return () => { setPageTitle("Admin"); setHeaderAction(null); };
-  }, []);
+  }, [searchQuery, sortCol, sortDir, sortOpen]);
 
   /* ─── Modal state ─── */
   const [showDetailsModal,  setShowDetailsModal]  = useState(false);
@@ -96,7 +181,6 @@ function Orders() {
   const handleDeleteClose = () => setShowDeleteModal(false);
   const handleDeleteShow  = (order) => { setSelectedOrder(order); setShowDeleteModal(true); };
 
-  // Tracking modal — closes edit modal while open, restores it on close
   const handleTrackingShow = () => {
     setNewTracking({ status: TRACKING_STATUSES[0], locationId: "" });
     setShowEditModal(false);
@@ -108,17 +192,17 @@ function Orders() {
   };
 
   /* ─── Data ─── */
-  const [orders,   setOrders]   = useState([]);
-  const [products, setProducts] = useState([]);
-  const [users,    setUsers]    = useState([]);
+  const [orders,    setOrders]    = useState([]);
+  const [products,  setProducts]  = useState([]);
+  const [users,     setUsers]     = useState([]);
   const [locations, setLocations] = useState([]);
 
   const [fetchingOrders, setFetchingOrders] = useState(true);
 
   /* ─── Per-operation loading ─── */
-  const [isEditing,   setIsEditing]   = useState(false);
-  const [isDeleting,  setIsDeleting]  = useState(false);
-  const [isTracking,  setIsTracking]  = useState(false);
+  const [isEditing,  setIsEditing]  = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
 
   /* ─── Edit state ─── */
   const [editingOrder, setEditingOrder] = useState({ items: [], paymentMethod: "", status: "" });
@@ -126,9 +210,7 @@ function Orders() {
   /* ─── Tracking state ─── */
   const [newTracking, setNewTracking] = useState({ status: TRACKING_STATUSES[0], locationId: "" });
 
-  useEffect(() => {
-    fetchAll();
-  }, [activeStatus]);
+  useEffect(() => { fetchAll(); }, [activeStatus]);
 
   const fetchAll = async () => {
     setFetchingOrders(true);
@@ -175,6 +257,32 @@ function Orders() {
   const previewTotal = editingOrder.items.reduce((sum, item) =>
     sum + getProductPrice(item.productId) * Number(item.quantity), 0
   );
+
+  /* ─── Filter + sort ─── */
+  const displayedOrders = [...orders]
+    .filter((o) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        o.id?.toString().toLowerCase().includes(q) ||
+        getFullName(o.userId).toLowerCase().includes(q) ||
+        o.status?.toLowerCase().includes(q) ||
+        ORDER_STATUS_LABELS[o.status]?.toLowerCase().includes(q) ||
+        o.paymentMethod?.toLowerCase().includes(q) ||
+        o.totalAmount?.toString().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      let aVal, bVal;
+      if (sortCol === "fullName")  { aVal = getFullName(a.userId).toLowerCase(); bVal = getFullName(b.userId).toLowerCase(); }
+      else if (sortCol === "itemCount")   { aVal = a.items?.length ?? 0;   bVal = b.items?.length ?? 0; }
+      else if (sortCol === "totalAmount") { aVal = a.totalAmount ?? 0;      bVal = b.totalAmount ?? 0; }
+      else if (sortCol === "createdAt")   { aVal = new Date(a.createdAt || 0); bVal = new Date(b.createdAt || 0); }
+      else { aVal = (a[sortCol] ?? "").toString().toLowerCase(); bVal = (b[sortCol] ?? "").toString().toLowerCase(); }
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
 
   /* ─── Edit order ─── */
   const editOrder = async (e) => {
@@ -252,9 +360,13 @@ function Orders() {
   const modalBox     = "bg-gray-900 rounded-lg w-full mx-4 max-h-[90vh] overflow-y-auto animate-slideUp";
 
   /* ─── Table rows ─── */
-  const orderRows = orders.map((order) => (
+  const orderRows = displayedOrders.map((order) => (
     <>
-      <td className="text-center px-4 py-3 text-xs text-gray-400 truncate max-w-[100px]" title={order.id}>{order.id}</td>
+      <td className="text-center px-4 py-3 font-mono">
+        <span className="inline-block max-w-[80px] truncate align-bottom text-xs text-gray-400" title={order.id}>
+          {order.id}
+        </span>
+      </td>
       <td className="text-center px-4 py-3">{getFullName(order.userId)}</td>
       <td className="text-center px-4 py-3">{order.items?.length ?? 0}</td>
       <td className="text-center px-4 py-3">${order.totalAmount?.toFixed(2)}</td>
@@ -285,6 +397,11 @@ function Orders() {
         {fetchingOrders ? (
           <div className="flex items-center justify-center py-20 gap-3 text-gray-400">
             <Spinner /><span>Loading orders...</span>
+          </div>
+        ) : displayedOrders.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+            <i className="bi bi-search text-5xl mb-3" />
+            <p>No orders found for "<span className="text-gray-300">{searchQuery}</span>"</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -318,7 +435,6 @@ function Orders() {
               <button onClick={handleDetailsClose} className="hover:opacity-70 text-2xl leading-none">&times;</button>
             </div>
             <div className="p-6 space-y-6">
-              {/* Order Info */}
               <div>
                 <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">Order Info</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -330,7 +446,6 @@ function Orders() {
                 </div>
               </div>
 
-              {/* Customer Info */}
               <div className="border-t border-gray-700 pt-4">
                 <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">Customer Info</h3>
                 {(() => {
@@ -347,7 +462,6 @@ function Orders() {
                 })()}
               </div>
 
-              {/* Items */}
               <div className="border-t border-gray-700 pt-4">
                 <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">Order Items</h3>
                 <div className="space-y-3">
@@ -366,7 +480,6 @@ function Orders() {
                 </div>
               </div>
 
-              {/* Tracking */}
               {selectedOrder.tracking?.length > 0 && (
                 <div className="border-t border-gray-700 pt-4">
                   <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">Tracking History</h3>
@@ -410,13 +523,11 @@ function Orders() {
             </div>
             <div className="p-4">
               <form onSubmit={editOrder}>
-                {/* Meta */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div><p className="text-gray-400 text-xs">Order ID</p><p className="text-white font-semibold text-xs">#{selectedOrder.id}</p></div>
                   <div><p className="text-gray-400 text-xs">Customer</p><p className="text-white font-semibold">{getFullName(selectedOrder.userId)}</p></div>
                 </div>
 
-                {/* Status */}
                 <div className="mb-3 relative">
                   <select id="edit_status" value={editingOrder.status}
                     onChange={(e) => setEditingOrder({ ...editingOrder, status: e.target.value })}
@@ -428,7 +539,6 @@ function Orders() {
                   <label htmlFor="edit_status" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Status</label>
                 </div>
 
-                {/* Payment Method */}
                 <div className="mb-4 relative">
                   <select id="edit_payment" value={editingOrder.paymentMethod}
                     onChange={(e) => setEditingOrder({ ...editingOrder, paymentMethod: e.target.value })}
@@ -441,7 +551,6 @@ function Orders() {
                   <label htmlFor="edit_payment" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Payment Method</label>
                 </div>
 
-                {/* Items */}
                 <div className="mb-4">
                   <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">Order Items</h3>
                   {editingOrder.items.length === 0 && (
@@ -451,7 +560,7 @@ function Orders() {
                     {editingOrder.items.map((item, index) => {
                       const currentStock = getProductStock(item.productId);
                       const stock        = currentStock + item.quantity;
-                      const lineTotal = getProductPrice(item.productId) * item.quantity;
+                      const lineTotal    = getProductPrice(item.productId) * item.quantity;
                       return (
                         <div key={index} className="bg-gray-800 p-4 rounded">
                           <div className="flex justify-between items-center mb-2">
@@ -484,7 +593,6 @@ function Orders() {
                   )}
                 </div>
 
-                {/* Tracking */}
                 <div className="mb-4 border-t border-gray-700 pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider">
@@ -542,7 +650,6 @@ function Orders() {
             </div>
             <div className="p-4">
               <form onSubmit={submitTracking}>
-                {/* Tracking status */}
                 <div className="mb-4 relative">
                   <select id="tracking_status" value={newTracking.status}
                     onChange={(e) => setNewTracking({ ...newTracking, status: e.target.value })}
@@ -554,13 +661,11 @@ function Orders() {
                   <label htmlFor="tracking_status" className="absolute left-3 top-1 text-xs pointer-events-none text-gray-400">Tracking Status</label>
                 </div>
 
-                {/* Description preview */}
                 <div className="mb-4 bg-gray-800 border border-gray-700 rounded px-4 py-3">
                   <p className="text-gray-400 text-xs mb-1">Description</p>
                   <p className="text-gray-200 text-sm">{TRACKING_STATUS_LABELS[newTracking.status]?.description}</p>
                 </div>
 
-                {/* Location — optional */}
                 <div className="mb-4 relative">
                   <select id="tracking_location" value={newTracking.locationId}
                     onChange={(e) => setNewTracking({ ...newTracking, locationId: e.target.value })}
