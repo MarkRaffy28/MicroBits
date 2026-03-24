@@ -19,6 +19,7 @@ import Locations from "./pages/admin/Locations";
 import OrderDetail from "./pages/user/OrderDetail";
 import Orders from "./pages/admin/Orders";
 import Products from "./pages/admin/Products";
+import Sales from "./pages/admin/Sales";
 import UserOrders from "./pages/user/UserOrders";
 import Users from "./pages/admin/Users";
 
@@ -69,8 +70,9 @@ function App() {
             >
               <Route index element={<Dashboard />} />
               <Route path="locations" element={<Locations />} />
-              <Route path="products" element={<Products />} />
               <Route path="orders/:status" element={<Orders />} />
+              <Route path="products" element={<Products />} />
+              <Route path="sales" element={<Sales />} />
               <Route path="users/:role" element={<Users />} />
             </Route>
 

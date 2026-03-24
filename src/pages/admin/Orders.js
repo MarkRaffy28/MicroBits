@@ -340,6 +340,16 @@ function Orders() {
     }
   };
 
+  /* ─── Delete tracking event ─── */
+  const deleteTrackingEvent = (index) => {
+    // index is from the reversed array, convert back to original
+    const originalIndex = (selectedOrder.tracking.length - 1) - index;
+    const updatedTracking = selectedOrder.tracking.filter((_, i) => i !== originalIndex);
+    const updatedOrder = { ...selectedOrder, tracking: updatedTracking };
+    setSelectedOrder(updatedOrder);
+    setOrders((prev) => prev.map((o) => (o.id === selectedOrder.id ? updatedOrder : o)));
+  };
+
   /* ─── Delete order ─── */
   const deleteOrder = async () => {
     setIsDeleting(true);
@@ -609,11 +619,17 @@ function Orders() {
                       {[...selectedOrder.tracking].reverse().map((event, i) => {
                         const loc = event.locationId ? locations.find((l) => l.id === event.locationId) : null;
                         return (
-                          <div key={i} className="relative">
-                            <div className="absolute -left-[13px] top-1 w-3 h-3 rounded-full bg-blue-500 border-2 border-gray-900" />
-                            <p className="text-white text-xs font-semibold">{event.title}</p>
-                            {loc && <p className="text-blue-400 text-xs"><i className="bi bi-geo-alt mr-1" />{loc.name}, {loc.city}</p>}
-                            <p className="text-gray-600 text-xs">{formatDate(event.timestamp)}</p>
+                          <div key={i} className="relative flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <div className="absolute -left-[13px] top-1 w-3 h-3 rounded-full bg-blue-500 border-2 border-gray-900" />
+                              <p className="text-white text-xs font-semibold">{event.title}</p>
+                              {loc && <p className="text-blue-400 text-xs"><i className="bi bi-geo-alt mr-1" />{loc.name}, {loc.city}</p>}
+                              <p className="text-gray-600 text-xs">{formatDate(event.timestamp)}</p>
+                            </div>
+                            <button type="button" onClick={() => deleteTrackingEvent(i)}
+                              className="flex-shrink-0 text-red-500 hover:text-red-400 transition-colors p-0.5 mt-0.5">
+                              <i className="bi bi-trash text-base" />
+                            </button>
                           </div>
                         );
                       })}

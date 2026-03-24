@@ -20,6 +20,16 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const FIREBASE_ERROR_MESSAGES = {
+    "auth/user-not-found":        "No account found with that email or username.",
+    "auth/wrong-password":        "Incorrect password. Please try again.",
+    "auth/invalid-credential":    "Invalid email or password.",
+    "auth/invalid-email":         "Please enter a valid email address.",
+    "auth/user-disabled":         "This account has been disabled.",
+    "auth/too-many-requests":     "Too many failed attempts. Please try again later.",
+    "auth/network-request-failed":"Network error. Check your connection and try again.",
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
@@ -28,11 +38,10 @@ const Login = () => {
     try {
       const user = await login(usernameOrEmail, password);
       setCurrentUser(user);
-
       addToast("Logged in successfully!");
       navigate(user.role === "admin" ? "/admin" : "/user");
     } catch (err) {
-      setError("Invalid credentials");
+      setError(FIREBASE_ERROR_MESSAGES[err.code] || err.message || "Invalid credentials");
       setIsLoading(false);
     }
   };

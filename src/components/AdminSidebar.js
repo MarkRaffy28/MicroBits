@@ -10,19 +10,9 @@ const navItems = [
     icon: "bi-house",
   },
   {
-    label: "Users",
-    path: "/admin/users",
-    icon: "bi-person",
-    submenu: [
-      { label: "All Users", path: "/admin/users/all" },
-      { label: "Regular Users", path: "/admin/users/user" },
-      { label: "Admin Users", path: "/admin/users/admin" },
-    ],
-  },
-  {
-    label: "Products",
-    path: "/admin/products",
-    icon: "bi-box-seam",
+    label: "Locations",
+    path: "/admin/locations",
+    icon: "bi-geo-alt"
   },
   {
     label: "Orders",
@@ -36,9 +26,25 @@ const navItems = [
     ],
   },
   {
-    label: "Locations",
-    path: "/admin/locations",
-    icon: "bi-geo-alt"
+    label: "Sales",
+    path: "/admin/sales",
+    icon: "bi-currency-dollar",
+    noFill: true
+  },
+  {
+    label: "Products",
+    path: "/admin/products",
+    icon: "bi-box-seam",
+  },
+  {
+    label: "Users",
+    path: "/admin/users",
+    icon: "bi-person",
+    submenu: [
+      { label: "All Users", path: "/admin/users/all" },
+      { label: "Regular Users", path: "/admin/users/user" },
+      { label: "Admin Users", path: "/admin/users/admin" },
+    ],
   },
 ];
 
@@ -90,7 +96,8 @@ function AdminSidebar({ isOpen, onClose }) {
         : "hover:bg-blue-600"
     }`;
 
-  const getNavIcon = (path, icon, submenu) => {
+  const getNavIcon = (path, icon, submenu, noFill) => {
+    if (noFill) return icon;
     const isActive = activePath === path || isSubmenuActive(submenu);
     return isActive ? `${icon}-fill` : icon;
   };
@@ -136,7 +143,8 @@ function AdminSidebar({ isOpen, onClose }) {
                           className={`bi ${getNavIcon(
                             item.path,
                             item.icon,
-                            item.submenu
+                            item.submenu,
+                            item.noFill
                           )} text-lg flex-shrink-0`}
                         />
                         <span>{item.label}</span>
@@ -174,7 +182,9 @@ function AdminSidebar({ isOpen, onClose }) {
                       <i
                         className={`bi ${getNavIcon(
                           item.path,
-                          item.icon
+                          item.icon, 
+                          undefined,
+                          item.noFill
                         )} text-lg flex-shrink-0`}
                       />
                       <span>{item.label}</span>

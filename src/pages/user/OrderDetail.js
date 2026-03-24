@@ -224,7 +224,10 @@ function OrderDetail() {
               const p         = getProduct(item.productId);
               const lineTotal = Number(item.price) * item.quantity;
               return (
-                <div key={i} className="flex items-center gap-4 px-5 py-4">
+                <div key={i}
+                  onClick={() => p && navigate(`/user/product/${item.productId}`, { state: { product: p } })}
+                  className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                >
                   {p?.image ? (
                     <img src={p.image} alt={p?.name}
                       className="w-14 h-14 rounded-xl object-cover flex-shrink-0 border border-gray-700" />
@@ -234,7 +237,7 @@ function OrderDetail() {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold text-sm truncate">{p?.name ?? `Product #${item.productId}`}</p>
+                    <p className="text-white font-semibold text-sm truncate group-hover:text-blue-400 hover:text-blue-400 transition-colors">{p?.name ?? `Product #${item.productId}`}</p>
                     <p className="text-gray-500 text-xs mt-0.5">{p?.category ?? ""}</p>
                     <p className="text-gray-400 text-xs mt-1">{item.quantity} × ${Number(item.price).toFixed(2)}</p>
                   </div>

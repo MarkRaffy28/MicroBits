@@ -224,6 +224,7 @@ function Dashboard() {
           value={`$${totalRevenue.toFixed(2)}`}
           sub={`${statusCounts.completed} completed orders`}
           color="text-green-400"    chart={categoryChart.length ? categoryChart : undefined} chartColor="bg-green-500"
+          onClick={() => navigate("/admin/sales")}
         />
         <StatCard
           icon="bi-box-seam"        label="Products"
@@ -348,7 +349,10 @@ function Dashboard() {
           ) : (
             <div className="space-y-2">
               {lowStock.map((p) => (
-                <div key={p.id} className="flex items-center justify-between bg-gray-700/40 rounded-lg px-3 py-2">
+                <div key={p.id}
+                  onClick={() => navigate("/admin/products")}
+                  className="flex items-center justify-between bg-gray-700/40 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-700/70 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     {p.image ? (
                       <img src={p.image} alt={p.name} className="w-8 h-8 rounded object-cover" />
@@ -388,13 +392,16 @@ function Dashboard() {
               .slice(0, 5)
               .map(([id, rev]) => {
                 const p = products.find((p) => p.id === id);
-                return { name: p?.name ?? `Product #${id}`, revenue: rev, category: p?.category ?? "" };
+                return { id, name: p?.name ?? `Product #${id}`, revenue: rev, category: p?.category ?? "", image: p?.image };
               });
             const maxRev = Math.max(...topProds.map((p) => p.revenue));
             return (
               <div className="space-y-3">
                 {topProds.map((p, i) => (
-                  <div key={i}>
+                  <div key={i}
+                    onClick={() => navigate(`/admin/products`)}
+                    className="cursor-pointer hover:bg-gray-700/30 rounded-lg px-2 py-1 -mx-2 transition-colors"
+                  >
                     <div className="flex justify-between text-xs mb-1">
                       <span className="text-white font-medium truncate max-w-[60%]">{p.name}</span>
                       <span className="text-green-400 font-semibold">${p.revenue.toFixed(2)}</span>

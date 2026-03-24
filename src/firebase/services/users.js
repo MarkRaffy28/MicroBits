@@ -53,7 +53,7 @@ const fileToBase64 = async (file) => {
 // =========================
 
 export const getAllUsers = async () => {
-  const snapshot = await getDocs(query(usersCol, where("status", "==", "active")));
+  const snapshot = await getDocs(usersCol);
   return snapshot.docs.map((d) => d.data());
 };
 
@@ -203,4 +203,24 @@ export const deleteUser = async (userId) => {
   }
 
   throw Object.assign(new Error("Unauthorized: cannot delete another user's account"), { code: 403 });
+};
+
+/**
+ * Restores a soft-deleted user.
+ * Admin check reads from the auth cache — no extra Firestore read.
+ */
+export const restoreUser = async (userId) => {
+  const docRef  = doc(usersCol, userId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) throw Object.assign(new Error("User not found"), { code: 404 });
+
+  const userData = docSnap.data();
+  const admin    = isCurrentUserAdmin(); // cache-read, no await needed
+
+  if (admin) {
+    await updateDoc(docRef, { status: "active", deletedAt: null });
+    return { ...userData, status: "active", deletedAt: null };
+  }
+
+  throw Object.assign(new Error("Unauthorized: only admins can restore users"), { code: 403 });
 };

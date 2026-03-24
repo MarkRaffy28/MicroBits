@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
 import AnimatedTableRows from "../../react_bits/AnimatedTableRows";
-import { getAllUsers, createUser, updateUser, deleteUser as firebaseDeleteUser, } from "../../firebase/services/users";
+import { getAllUsers, createUser, updateUser, restoreUser as firebaseRestoreUser, deleteUser as firebaseDeleteUser, } from "../../firebase/services/users";
 import "../../styles/StyleSheet.css";
 
 /* ─── Spinner ─── */
@@ -68,6 +68,7 @@ const SORT_COLUMNS = [
   { key: "role",        label: "Role"      },
   { key: "createdAt",   label: "Joined"    },
   { key: "cartCount",   label: "Cart"      },
+  { key: "status",      label: "Status"    },
 ];
 
 function Users() {
@@ -123,9 +124,10 @@ function Users() {
   const [fetchingUsers, setFetchingUsers] = useState(true);
 
   /* ─── Per-operation loading ─── */
-  const [isAdding,   setIsAdding]   = useState(false);
-  const [isEditing,  setIsEditing]  = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isAdding,    setIsAdding]    = useState(false);
+  const [isEditing,   setIsEditing]   = useState(false);
+  const [isDeleting,  setIsDeleting]  = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   /* ─── Image ─── */
   const [imageFile,    setImageFile]    = useState(null);
@@ -265,6 +267,14 @@ function Users() {
     </span>
   );
 
+  const statusBadge = (s) => (
+    <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+      s === "deleted" ? "bg-red-900 text-red-300" : "bg-green-900 text-green-300"
+    }`}>
+      {s === "deleted" ? "Deleted" : "Active"}
+    </span>
+  );
+
   /* ─── Filter + sort ─── */
   const displayedUsers = [...users]
     .filter((u) => {
@@ -326,6 +336,20 @@ function Users() {
     }
   };
 
+  /* ─── RESTORE ─── */
+  const restoreUser = async (user) => {
+    setIsRestoring(true);
+    try {
+      await firebaseRestoreUser(user.id);
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, status: "active" } : u)));
+      addToast(`User "${user.username}" restored.`, "success");
+    } catch {
+      addToast("Failed to restore user.", "error");
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   /* ─── DELETE ─── */
   const deleteUser = async () => {
     setIsDeleting(true);
@@ -360,6 +384,7 @@ function Users() {
       <td className="text-center px-3 py-3 text-sm">{getFullName(user)}</td>
       <td className="text-center px-3 py-3 text-sm">{user.email || <span className="text-gray-500 italic">N/A</span>}</td>
       <td className="text-center px-3 py-3">{roleBadge(user.role)}</td>
+      <td className="text-center px-3 py-3">{statusBadge(user.status)}</td>
       <td className="text-center px-3 py-3">
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${cartCount(user) > 0 ? "bg-orange-600 text-white" : "bg-gray-700 text-gray-400"}`}>
           <i className="bi bi-cart2" /> {cartCount(user)}
@@ -375,11 +400,18 @@ function Users() {
           disabled={user.status === "deleted"}>
           <i className="bi bi-pencil mr-1" />Edit
         </button>
-        <button className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded transition-all duration-200 transform hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
-          onClick={(e) => { e.stopPropagation(); handleDeleteShow(user); }}
-          disabled={user.status === "deleted"}>
-          <i className="bi bi-trash mr-1" />Delete
-        </button>
+        {user.status === "deleted" ? (
+          <button className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1.5 rounded transition-all duration-200 transform hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
+            onClick={(e) => { e.stopPropagation(); restoreUser(user); }}
+            disabled={isRestoring}>
+            <i className="bi bi-arrow-counterclockwise mr-1" />Restore
+          </button>
+        ) : (
+          <button className="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded transition-all duration-200 transform hover:scale-105"
+            onClick={(e) => { e.stopPropagation(); handleDeleteShow(user); }}>
+            <i className="bi bi-trash mr-1" />Delete
+          </button>
+        )}
       </td>
     </>
   ));
@@ -408,6 +440,7 @@ function Users() {
                   <th className="text-center px-3 py-3">Full Name</th>
                   <th className="text-center px-3 py-3">Email</th>
                   <th className="text-center px-3 py-3">Role</th>
+                  <th className="text-center px-3 py-3">Status</th>
                   <th className="text-center px-3 py-3">Cart</th>
                   <th className="text-center px-3 py-3">Actions</th>
                 </tr>
